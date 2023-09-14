@@ -141,41 +141,7 @@ class TMackieCU(common.TMackieCU_Base):
         #                                                                                                                           #
         #############################################################################################################################
         elif event.midiId == midi.MIDI_PITCHBEND:
-            if event.midiChan <= 8:
-                event.inEv = event.data1 + (event.data2 << 7)
-                event.outEv = (event.inEv << 16) // 16383
-                event.inEv -= 0x2000
-
-                if self.Page == common.MackieCUPage_Free:
-                    self.ColT[event.midiChan].Peak = self.ActivityMax
-                    self.FreeCtrlT[self.ColT[event.midiChan].TrackNum] = event.data1 + \
-                        (event.data2 << 7)
-                    device.hardwareRefreshMixerTrack(
-                        self.ColT[event.midiChan].TrackNum)
-                    event.data1 = self.ColT[event.midiChan].BaseEventID + 7
-                    event.midiChan = 0
-                    event.midiChanEx = event.midiChanEx & (not 0xF)
-                    self.SendMsg2('Free slider ' + str(event.data1) + ': ' +
-                                  ui.getHintValue(event.outEv, midi.FromMIDI_Max))
-                    device.processMIDICC(event)
-                elif self.ColT[event.midiChan].SliderEventID >= 0:
-                    # slider (mixer track volume)
-                    if self.ColT[event.midiChan].TrackNum >= 0:
-                        if (self.Page != common.MackieCUPage_EQ) and (self.Page != common.MackieCUPage_FX):
-                            if (common.TouchFaderToSelect):                       
-                                if mixer.trackNumber != self.ColT[event.midiChan].TrackNum:
-                                    mixer.setTrackNumber(self.ColT[event.midiChan].TrackNum)
-                    event.handled = True
-                    mixer.automateEvent(self.ColT[event.midiChan].SliderEventID, self.AlphaTrack_SliderToLevel(
-                        event.inEv + 0x2000), midi.REC_MIDIController, self.SmoothSpeed)
-                    # hint
-                    n = mixer.getAutoSmoothEventValue(
-                        self.ColT[event.midiChan].SliderEventID)
-                    s = mixer.getEventIDValueString(
-                        self.ColT[event.midiChan].SliderEventID, n)
-                    if s != '':
-                        s = ': ' + s
-                    self.SendMsg2(self.ColT[event.midiChan].SliderName + s)
+            self.handleFaders(event)
 
         #############################################################################################################################
         #                                                                                                                           #
@@ -622,7 +588,7 @@ class TMackieCU(common.TMackieCU_Base):
                             self.UpdateColT()
                             self.UpdateLEDs()
 
-                    elif event.data1 in [0x28, 0x2A, 0x29, 0x2B, 0x2C, 0x2D]:
+                    elif event.data1 in common.PageSelectors:
                         self.SliderHoldCount += -1 + (int(event.data2 > 0) * 2)
                         if event.data2 > 0:
                             n = event.data1 - 0x28
@@ -757,7 +723,7 @@ class TMackieCU(common.TMackieCU_Base):
                     # ------------
                     # VPOT PUSH
                     # ------------
-                    elif event.data1 in [0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27]:
+                    elif event.data1 in common.SelectButtonsEX:
                         if self.Page == common.MackieCUPage_Free:
                             i = event.data1 - 0x20
                             self.ColT[i].KnobHeld = event.data2 > 0
@@ -774,33 +740,22 @@ class TMackieCU(common.TMackieCU_Base):
                             return
                         elif event.data2 > 0:
                             n = event.data1 - 0x20
-                            if self.Page == common.MackieCUPage_Sends:
-                                if mixer.setRouteTo(mixer.trackNumber(), self.ColT[n].TrackNum, -1) < 0:
-                                    self.SendMsg2('Cannot send to this track')
-                                else:
-                                    if mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[n].TrackNum):
-                                        self.SendMsg2(
-                                            "VPOT set for send to " + mixer.getTrackName(self.ColT[n].TrackNum))
-                                    else:
-                                        self.SendMsg2(
-                                            "The "+mixer.getTrackName(self.ColT[n].TrackNum)+" VPOT has been reset")
-                                    mixer.afterRoutingChanged()
+                            if self.Page == common.MackieCUPage_EQ:
+                                if event.data1 == 0x27:  # "Reset All"
+                                    self.SetKnobValue(0, midi.MaxInt)
+                                    self.SetKnobValue(1, midi.MaxInt)
+                                    self.SetKnobValue(2, midi.MaxInt)
+                                    self.SetKnobValue(3, midi.MaxInt)
+                                    self.SetKnobValue(4, midi.MaxInt)
+                                    self.SetKnobValue(5, midi.MaxInt)
+                                    self.SetKnobValue(6, midi.MaxInt)
+                                    self.SetKnobValue(7, midi.MaxInt)
+                                    SendMsg2("All EQ levels reset")
+                            elif self.Page == common.MackieCUPage_FX and self.CurPluginID > -1:
+                                # AP: Ignore button presses, there's no functionality that makes sense in this case
+                                pass
                             else:
-                                if self.Page == common.MackieCUPage_EQ:
-                                    if event.data1 == 0x27:  # "Reset All"
-                                        self.SetKnobValue(0, midi.MaxInt)
-                                        self.SetKnobValue(1, midi.MaxInt)
-                                        self.SetKnobValue(2, midi.MaxInt)
-                                        self.SetKnobValue(3, midi.MaxInt)
-                                        self.SetKnobValue(4, midi.MaxInt)
-                                        self.SetKnobValue(5, midi.MaxInt)
-                                        self.SetKnobValue(6, midi.MaxInt)
-                                        self.SetKnobValue(7, midi.MaxInt)
-                                        SendMsg2("All EQ levels reset")
-                                else:
-                                    self.SetKnobValue(n, midi.MaxInt)
-                                    # if self.Page == MackieCUPage_FX:
-                                    #SendMsg2("\\ Pending Functionality! \\ "+self.ColT[n].TrackName)
+                                self.SetKnobValue(n, midi.MaxInt)
                     # -------------------
                     # FREE HOLD BUTTONS
                     # -------------------
