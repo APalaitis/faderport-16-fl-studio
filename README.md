@@ -9,9 +9,12 @@ README TO-DO
 # To Do
 
 ## Bugs:
+* Select (EX) buttons are not functioning correctly.
 
 ## Features:
 * Rewrite plugin mode to use all 16 faders.
+* Assign stereo width mode to some button.
+* Assign EQ mode to some button.
 
 ## Code quality:
 * Extract duplicate parts of OnMidiMsg to common.py, see how it can be refactored for clarity.
