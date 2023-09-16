@@ -47,7 +47,10 @@ EMAGIC_EXT =    bytearray([0xF0, 0x00, 0x00, 0x66, 0x11, 0x12, 0])  #Base EMAGIC
 # Button Groups
 SelectButtons = [0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F] # In the main volume/pan page
 SelectButtonsEX = [0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27] # When in pages like plugins or sends
-PageSelectors = [0x28, 0x2A, 0x29, 0x2B, 0x2C, 0x2D]
+PageSelectors = [0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D]
+MuteButtons = [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]
+SoloButtons = [0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF]
+Faders = [0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F]
 
 #->
 OffOnStr = ('off', 'on')
@@ -98,8 +101,6 @@ TargetSecondDisplays=False #=Enhanced Hardware:= Provides additional information
 FaderPortSupport = False #=Device Specific:=Some additional Support for Presonus faderport 8 and 16
 CompactDescriptors = False#=Device Specific:=Tidies up some display options
 SplitAccrossScribbleStrips = True#=Device Specific:=Tidies up Text accross seperate Scribble Strips
-ThrottleStickSupport=False#=Device Specific:=Throttle Stock can Zoom in/out and perform various "interesting" functions
-#MoreInfoURL=https://gadgeteer.home.blog/2021/04/09/dude-with-a-cool-haircut-smiley-face/
 #->
 
 #######################
@@ -221,6 +222,7 @@ class TMackieCU_Base():
         if (not isExtension):
             self.ExtenderPos = ExtenderLeft
         self.PluginTrack = 0
+        self.midiListeners = []
 
 # -------------------------------------------------------------------------------------------------------------------------------
 # FUNCTIONS:
@@ -341,8 +343,7 @@ class TMackieCU_Base():
         ui.setHintMsg(device.getName())    
         #self.OnSendTempMsg('Linked to ' + ui.getProgTitle() + ' (' + ui.getVersion() + ')', 2000);
         self.OnSendTempMsg("MCUE script version 1.0.0            ", 2000)
-
-
+        self.RegisteDefaultMidiListeners()
 
     #############################################################################################################################
     #                                                                                                                           #
@@ -451,7 +452,7 @@ class TMackieCU_Base():
                         self.CurPluginID = CurPluginID
                         self.PluginParamOffset = 0
                         self.UpdateColT()
-                        self.UpdateLEDs()
+                        self.UpdateCommonLEDs()
                         self.UpdateTextDisplay()
                         return
                 else:
@@ -503,9 +504,12 @@ class TMackieCU_Base():
                 for n in range(0, len(self.ColT)):
                     self.UpdateCol(n)
 
+        if flags & midi.HW_Dirty_RemoteLinks:
+            self.UpdateColT()
+
         # LEDs
         if flags & midi.HW_Dirty_LEDs:
-            self.UpdateLEDs()
+            self.UpdateCommonLEDs()
 
     #############################################################################################################################
     #                                                                                                                           #
@@ -541,7 +545,7 @@ class TMackieCU_Base():
     #                                                                                                                           #
     #############################################################################################################################
 
-    def UpdateLEDs(self):
+    def UpdateCommonLEDs(self):
         if device.isAssigned():
             # stop
             device.midiOutNewMsg(
@@ -757,6 +761,11 @@ class TMackieCU_Base():
                 if self.ShowTrackNumbers:
                     s = mixer.getTrackName(self.ColT[index].TrackNum, 6)
                     sa = '   '+str(self.ColT[index].TrackNum)+' '
+                    if (self.Page == MackieCUPage_Sends):
+                        if mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[index].TrackNum):
+                            sa = ' ->'+str(self.ColT[index].TrackNum)+'<-'
+                        elif self.ColT[index].TrackNum == mixer.trackNumber():
+                            sa = ' <-'+str(self.ColT[index].TrackNum)+'->'
                 else:
                     t = mixer.getTrackName(self.ColT[index].TrackNum, 12).split()
                     if len(t) > 0:
@@ -839,7 +848,8 @@ class TMackieCU_Base():
         if device.isAssigned():
             # AP: By default, values come from REC events
             sv = mixer.getEventValue(self.ColT[Num].SliderEventID)
-
+            
+            linkValue = self.checkFaderLink(Num % 8)
             # AP: Plugin params don't have REC events associated with them, so we use functions to get the values
             if self.Page == MackieCUPage_FX:
                 if (self.CurPluginID >= 0):
@@ -849,6 +859,9 @@ class TMackieCU_Base():
                         if paramIndex < paramCount:
                             paramValue = plugins.getParamValue(paramIndex, self.PluginTrack, self.CurPluginID)
                             sv = int(midi.FromMIDI_Max * paramValue)
+            # AP: If the control is linked, don't move the fader
+            elif linkValue > -1 and self.Page == MackieCUPage_Pan:
+                sv = int(midi.FromMIDI_Max * linkValue)
 
             if Num < 8:
                 # V-Pot
@@ -880,10 +893,15 @@ class TMackieCU_Base():
                 # arm, solo, mute
                 device.midiOutNewMsg(((0x00 + Num) << 8) + midi.TranzPort_OffOnBlinkT[int(mixer.isTrackArmed(
                     self.ColT[Num].TrackNum)) * (1 + int(transport.isRecording()))], self.ColT[Num].LastValueIndex + 1)
-                device.midiOutNewMsg(((0x08 + Num) << 8) + midi.TranzPort_OffOnT[mixer.isTrackSolo(
-                    self.ColT[Num].TrackNum)], self.ColT[Num].LastValueIndex + 2)
-                device.midiOutNewMsg(((0x10 + Num) << 8) + midi.TranzPort_OffOnT[not mixer.isTrackEnabled(
-                    self.ColT[Num].TrackNum)], self.ColT[Num].LastValueIndex + 3)
+                if (self.Page == MackieCUPage_Sends):
+                    isBeingSentTo = mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[Num].TrackNum)
+                    device.midiOutNewMsg(((0x08 + Num) << 8) + midi.TranzPort_OffOnT[isBeingSentTo], self.ColT[Num].LastValueIndex + 2)
+                    device.midiOutNewMsg(((0x10 + Num) << 8) + midi.TranzPort_OffOnT[isBeingSentTo], self.ColT[Num].LastValueIndex + 3)
+                else:
+                    device.midiOutNewMsg(((0x08 + Num) << 8) + midi.TranzPort_OffOnT[mixer.isTrackSolo(
+                        self.ColT[Num].TrackNum)], self.ColT[Num].LastValueIndex + 2)
+                    device.midiOutNewMsg(((0x10 + Num) << 8) + midi.TranzPort_OffOnT[not mixer.isTrackEnabled(
+                        self.ColT[Num].TrackNum)], self.ColT[Num].LastValueIndex + 3)
 
             # slider
             data1 = self.AlphaTrack_LevelToSlider(sv)
@@ -1128,34 +1146,18 @@ class TMackieCU_Base():
     #############################################################################################################################
 
     def SetPage(self, Value):
-        oldPage = self.Page
         self.Page = Value
 
         self.FirstTrack = False
         receiverCount = device.dispatchReceiverCount()
         if receiverCount == 0:
             self.SetFirstTrack(self.FirstTrackT[self.FirstTrack])
-        # elif self.Page == oldPage:
-        #     if self.ExtenderPos == ExtenderLeft:
-
-        #         # AP: Seems unnecessary? Results in a bug where clicking on the same page button messes with the track calculation logic.
-
-        #         # self.SetFirstTrack(
-        #         #     self.FirstTrackT[self.FirstTrack] + receiverCount * 8)
-        #         for n in range(0, receiverCount):
-        #             device.dispatch(n, midi.MIDI_NOTEON + (0x7F << 8) +
-        #                             (self.FirstTrackT[self.FirstTrack] + (n * 8) << 16))
-        #     elif self.ExtenderPos == ExtenderRight:
-        #         # self.SetFirstTrack(self.FirstTrackT[self.FirstTrack])
-        #         for n in range(0, receiverCount):
-        #             device.dispatch(n, midi.MIDI_NOTEON + (0x7F << 8) +
-        #                             (self.FirstTrackT[self.FirstTrack] + ((n + 1) * 8) << 16))
 
         self.CurPluginID = -1
         self.CurPluginOffset = 0
 
         self.UpdateColT()
-        self.UpdateLEDs()
+        self.UpdateCommonLEDs()
         self.UpdateTextDisplay()
 
     #############################################################################################################################
@@ -1174,12 +1176,90 @@ class TMackieCU_Base():
 # -------------------------------------------------------------------------------------------------------------------------------
 # MIDI MESSAGE HANDLERS
 # -------------------------------------------------------------------------------------------------------------------------------
+    class EventInfo:
+        def __init__(
+            self,
+            midiId: int = None,
+            pmeFlags: int = None,
+            data1: int = None,
+            data2NonZero: bool = False,
+        ):
+            self.midiId: int = midiId
+            self.pmeFlags: int = pmeFlags
+            self.data1: int = data1
+            self.data2NonZero: bool = data2NonZero
+    
+    def RegisterMidiListener(self, eventInfo: EventInfo, callback):
+        self.midiListeners.append([eventInfo, callback])
+
+    def OnMidiMsg(self, event):
+        for listener in self.midiListeners:
+            eventInfo = listener[0]
+            callback = listener[1]
+            shouldRun = (event.midiId == eventInfo.midiId and callable(callback)) \
+                and (not eventInfo.pmeFlags or event.pmeFlags & eventInfo.pmeFlags != 0) \
+                and (not eventInfo.data1 or event.data1 == eventInfo.data1) \
+                and (not eventInfo.data2NonZero or event.data2 > 0)
+            if shouldRun:
+                if (event.pmeFlags & midi.PME_System_Safe != 0):
+                    event.handled = True
+                callback(event)
+            elif (event.midiId == midi.MIDI_NOTEOFF or event.pmeFlags & midi.PME_System_Safe == 0):
+                event.handled = False
+
+    def RegisteDefaultMidiListeners(self):
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_PITCHBEND), self.handleFaders)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_CONTROLCHANGE), self.handleControlChange)
+        
+        for key in Faders:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, key, True), self.sliderHold)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x90, True), self.pianoRoll)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x91, True), self.hideWindows)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x92, True), self.handlePlaylist)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x3f, True), self.handleMixer)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x40, True), self.handleChannelRack)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x41, True), self.handleTempo)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, None, 0x4c, True), self.handleWindow)
+
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x34, True), self.handleMode)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x2e, True), self.handleBankChange)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x2f, True), self.handleBankChange)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x30, True), self.handleTrackChange)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x31, True), self.handleTrackChange)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x32, True), self.handleFlip)
+        for key in PageSelectors:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handlePageChange)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x53, True), self.user1)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x52, True), self.user2)
+        for key in SelectButtonsEX:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleSelectButtonsEX)
+        for key in SelectButtons:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, key, False), self.handleSelectButtons)
+        for key in SoloButtons:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, key, False), self.handleSolo)
+        for key in MuteButtons:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, key, False), self.handleMute)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, 0x50, False), self.handleSave)
+
     #############################################################################################################################
     #                                                                                                                           #
     #   PITCH BEND (FADERS)                                                                                                     #
     #                                                                                                                           #
     #############################################################################################################################
+    
+    def checkFaderLink(self, midiChan):
+        return device.getLinkedValue(device.findEventID(midi.EncodeRemoteControlID(device.getPortNumber(), midiChan, 255), 1))
+    
     def handleFaders(self, event):
+        index = event.midiChan % 8
+        
+        # AP: Check if the fader is linked to a param, and if so - unlink it from vol/pan
+        if (self.checkFaderLink(index) > -1 and self.Page == MackieCUPage_Pan):
+            self.UpdateColT()
+            # The event will continue to the linked parameter
+            event.handled = False
+            return
+
         if event.midiChan <= 8:
             event.inEv = event.data1 + (event.data2 << 7)
             event.outEv = (event.inEv << 16) // 16383
@@ -1217,3 +1297,307 @@ class TMackieCU_Base():
             if s != '':
                 s = ': ' + s
             self.SendMsg2(self.ColT[event.midiChan].SliderName + s)
+
+    #############################################################################################################################
+    #                                                                                                                           #
+    #   CONTROL CHANGE                                                                                                          #
+    #                                                                                                                           #
+    #############################################################################################################################
+    def handleControlChange(self, event):
+        if (event.midiChan == 0):
+            event.inEv = event.data2
+            if event.inEv >= 0x40:
+                event.outEv = -(event.inEv - 0x40)
+            else:
+                event.outEv = event.inEv
+                
+            if event.data1 == 0x3C:
+                if not self.isExtension:
+                    self.Jog(event)
+                event.handled = True
+
+            # knobs
+            elif event.data1 in [0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17]:
+                r = utils.KnobAccelToRes2(event.outEv)  # todo outev signof
+                Res = r * (1 / (40 * 2.5))
+                self.SetKnobValue(event.data1 - 0x10, event.outEv, Res)
+                event.handled = True
+            else:
+                event.handled = False  # for extra CCs in emulators
+        else:
+            event.handled = False  # for extra CCs in emulators
+
+    #############################################################################################################################
+    #                                                                                                                           #
+    #   MIDI NOTEON/OFF                                                                                                         #
+    #                                                                                                                           #
+    #############################################################################################################################
+        
+    # -----------
+    # Slider hold
+    # -----------
+    def sliderHold(self, event):
+        self.SliderHoldCount += -1 + (int(event.data2 > 0) * 2)
+
+    # -----------
+    # Piano Roll
+    # -----------
+    def pianoRoll(self, event):
+        if ui.getVisible(midi.widPianoRoll):
+            ui.hideWindow(midi.widPianoRoll)
+            self.SendMsg2("The Piano Roll Window is Closed")
+        else:
+            ui.showWindow(midi.widPianoRoll)
+            ui.setFocused(midi.widPianoRoll)
+            self.SendMsg2("The Piano Roll is Open")
+
+    # -----------------
+    # Hide all Windows
+    # -----------------
+    def hideWindows(self, event):
+        for x in range(0, 5):
+            ui.hideWindow(x)
+
+
+    # --------------
+    # Playlist
+    # --------------
+    def handlePlaylist(self, event):
+        if ui.getVisible(midi.widPlaylist):
+            ui.hideWindow(midi.widPlaylist)
+            self.SendMsg2("The PlayList/Song Window is Closed")
+        else:
+            ui.showWindow(midi.widPlaylist)
+            ui.setFocused(midi.widPlaylist)
+            self.SendMsg2("The Playlist/Song Window is Open")
+
+    # -------
+    # MIXER
+    # -------
+    def handleMixer(self, event):
+        if self.Shift:
+            if self.ShowTrackNumbers:
+                self.ShowTrackNumbers = False
+            else:
+                self.ShowTrackNumbers = True
+            self.UpdateTextDisplay()
+        else:
+            if ui.getVisible(midi.widMixer):
+                ui.hideWindow(midi.widMixer)
+                self.SendMsg2("The Mixer Window is Closed")
+            else:
+                ui.showWindow(midi.widMixer)
+                ui.setFocused(midi.widMixer)
+                self.SendMsg2("The Mixer Window is Open")
+    # ---------
+    # CHANNEL
+    # --------
+    def handleChannelRack(self, event):
+        if self.Shift:
+            if ui.getFocused(5) == 0:
+                channels.focusEditor(channels.getChannelIndex(
+                    channels.selectedChannel()))
+                channels.showCSForm(channels.getChannelIndex(
+                    channels.selectedChannel(-1)))
+            else:
+                channels.focusEditor(channels.getChannelIndex(
+                    channels.selectedChannel()))
+                channels.showCSForm(channels.getChannelIndex(
+                    channels.selectedChannel(-1)), 0)
+        else:
+            if ui.getVisible(midi.widChannelRack):
+                ui.hideWindow(midi.widChannelRack)
+                self.SendMsg2("The Channel Rack Window is Closed")
+            else:
+                ui.showWindow(midi.widChannelRack)
+                ui.setFocused(midi.widChannelRack)
+                self.SendMsg2("The Channel Rack Window is Open")
+    # -------
+    # TEMPO
+    # -------
+    def handleTempo(self, event):
+        transport.globalTransport(midi.FPT_TapTempo, 1)
+        s = str(mixer.getCurrentTempo(True))[:-2]
+        self.SendMsg2("Tempo: "+s)
+    # --------
+    # WINDOW
+    # --------
+    def handleWindow(self, event):
+        ui.nextWindow()
+        s = ui.getFocusedFormCaption()
+        if s != "":
+            self.SendMsg2('Current window: ' + s)
+    # ---------------
+    # MODE (METERS)
+    # ---------------
+    def handleMode(self, event):
+        if self.Shift:
+            self.FirstTrackT[self.FirstTrack] = 1
+            self.SetPage(self.Page)
+            self.SendMsg2(
+                'Extender on ' + self.MackieCU_ExtenderPosT[self.ExtenderPos], 1500)
+        else:                             
+            self.MeterMode = (self.MeterMode + 1) % 3
+            self.SendMsg2(self.MackieCU_MeterModeNameT[self.MeterMode])
+            self.ShowSelectedTrackInTimeWindow=(self.MeterMode==2) #Selected Track
+            self.UpdateMeterMode()
+            if not self.isExtension:
+                device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
+            device.midiOutSysex(bytes(bytearray([0xd1, 0, 0xF7])))
+            device.midiOutSysex(bytes(bytearray([0xd1, 16, 0xF7])))
+    # -------------------------------
+    # BANK UP / DOWN (8/16 - 24 tracks is static?)
+    # -------------------------------
+    def handleBankChange(self, event):
+        self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] - 8 + int(event.data1 == 0x2F) * 16)
+        if not self.isExtension:
+            device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
+        for m in range(0,  0 if self.isExtension else 1):
+            self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] - 8 + int(event.data1 == 0x2F) * 16)
+            if not self.isExtension:
+                device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
+        
+        if self.MixerScroll:
+            if self.ColT[event.midiChan].TrackNum >= 0:
+                if mixer.trackNumber != self.ColT[event.midiChan].TrackNum:
+                    mixer.setTrackNumber(self.ColT[event.midiChan].TrackNum+(-1), midi.curfxScrollToMakeVisible | midi.curfxMinimalLatencyUpdate)
+
+        if (self.CurPluginID != -1):  # Selected Plugin
+            if (event.data1 == 0x2E) & (self.PluginParamOffset >= 8):
+                self.PluginParamOffset -= 8
+            elif (event.data1 == 0x2F) & (self.PluginParamOffset + 8 < plugins.getParamCount(mixer.trackNumber(), self.CurPluginID + self.CurPluginOffset) - 8):
+                self.PluginParamOffset += 8
+        else:  # No Selected Plugin
+            if (event.data1 == 0x2E) & (self.CurPluginOffset >= 2):
+                self.CurPluginOffset -= 2
+            elif (event.data1 == 0x2F) & (self.CurPluginOffset < 2):
+                self.CurPluginOffset += 2
+    # ---------------------------
+    # MOVE UP / DOWN (1 track)
+    # ---------------------------
+    def handleTrackChange(self, event):
+        self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] - 1 + int(event.data1 == 0x31) * 2)
+        if not self.isExtension:
+            device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
+
+    # ---------------------
+    # PAGE SELECTORS
+    # ---------------------
+    def handleFlip(self, event):
+        self.Flip = not self.Flip
+        if not self.isExtension:
+            device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
+        self.UpdateColT()
+        self.UpdateCommonLEDs()
+
+    def handlePageChange(self, event):
+        self.SliderHoldCount += -1 + (int(event.data2 > 0) * 2)
+        n = event.data1 - 0x28
+        self.SetPage(n)
+        if not self.isExtension:
+            self.SendMsg2(self.MackieCU_PageNameT[n])
+            device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
+    
+    # --------
+    # USER 1
+    # --------
+    def user1(self, event):
+        self.SetPage(MackieCUPage_Stereo)
+    # --------
+    # USER 2
+    # --------
+    def user2(self, event):
+        self.SetPage(MackieCUPage_EQ)
+    # ------------
+    # SELECT BUTTONS (EX)
+    # ------------
+    def handleSelectButtonsEX(self, event):
+        isReceiver = event.data2 == 0x7e
+        selectIndex = event.data1 - 0x20
+        selectIndex += 8 if (self.isExtension != isReceiver) else 0
+        if self.Page == MackieCUPage_EQ:
+            if event.data1 == 0x27:  # "Reset All"
+                self.SetKnobValue(0, midi.MaxInt)
+                self.SetKnobValue(1, midi.MaxInt)
+                self.SetKnobValue(2, midi.MaxInt)
+                self.SetKnobValue(3, midi.MaxInt)
+                self.SetKnobValue(4, midi.MaxInt)
+                self.SetKnobValue(5, midi.MaxInt)
+                self.SetKnobValue(6, midi.MaxInt)
+                self.SetKnobValue(7, midi.MaxInt)
+                self.SendMsg2("All EQ levels reset")
+        elif self.Page == MackieCUPage_FX:
+            if self.CurPluginID == -1:
+                self.SetKnobValue(selectIndex, midi.MaxInt)
+                if not isReceiver:
+                    device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (0x7e << 16))
+            else:
+                # AP: Ignore button presses, there's no functionality that makes sense in this case
+                pass
+        elif self.Page == MackieCUPage_Sends:
+            mixer.setRouteTo(
+                mixer.trackNumber(),
+                selectIndex + 1,
+                not mixer.getRouteSendActive(mixer.trackNumber(), selectIndex + 1)
+            )
+        else:
+            self.SetKnobValue(selectIndex, midi.MaxInt)
+
+    # --------
+    # SELECT
+    # --------
+    def handleSelectButtons(self, event):
+        i = event.data1 - 0x18
+
+        ui.showWindow(midi.widMixer)
+        ui.setFocused(midi.widMixer)
+        self.UpdateCommonLEDs()
+        mixer.setTrackNumber(
+            self.ColT[i].TrackNum, midi.curfxScrollToMakeVisible | midi.curfxMinimalLatencyUpdate)
+
+        if self.Control:  # Link channel to track
+            mixer.linkTrackToChannel(midi.ROUTE_ToThis)
+        # Show Full Trackname on second display:
+        # EXPAND WITH CONTEXT?
+        self.SendMsg2(mixer.getTrackName(self.ColT[i].TrackNum))
+
+    # ------
+    # SOLO
+    # ------
+    def handleSolo(self, event):
+        if (self.Page == MackieCUPage_Pan):
+            i = event.data1 - 0x8
+            self.ColT[i].solomode = midi.fxSoloModeWithDestTracks
+            if self.Shift:
+                Include(self.ColT[i].solomode,midi.fxSoloModeWithSourceTracks)
+            mixer.soloTrack(self.ColT[i].TrackNum,
+                midi.fxSoloToggle, self.ColT[i].solomode)
+
+    # ------
+    # MUTE
+    # ------
+    def handleMute(self, event):
+        if (self.Page == MackieCUPage_Pan):
+            mixer.enableTrack(
+                self.ColT[event.data1 - 0x10].TrackNum)
+
+    # ------
+    # ARM
+    # ------
+    def handleArm(self, event):
+        if (self.Page == MackieCUPage_Pan):
+            mixer.armTrack(self.ColT[event.data1].TrackNum)
+            if mixer.isTrackArmed(self.ColT[event.data1].TrackNum):
+                self.SendMsg2(mixer.getTrackName(
+                    self.ColT[event.data1].TrackNum) + ' recording to ' + mixer.getTrackRecordingFileName(self.ColT[event.data1].TrackNum), 2500)
+            else:
+                self.SendMsg2(mixer.getTrackName(
+                    self.ColT[event.data1].TrackNum) + ' unarmed')
+    # ------
+    # SAVE
+    # ------
+    def handleSave(self, event):
+        transport.globalTransport(
+            midi.FPT_Save + int(self.Shift), int(event.data2 > 0) * 2, event.pmeFlags)
+
+
