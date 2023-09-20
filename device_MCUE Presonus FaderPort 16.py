@@ -134,8 +134,11 @@ class TMackieCU(common.TMackieCU_Base):
                                     midi.FPT_HZoomJog + int(self.Shift), 1, event.pmeFlags)
 
                         elif self.JogSource == 0:
-                            transport.globalTransport(
-                                midi.FPT_Up - 0x60 + event.data1, int(event.data2 > 0) * 2, event.pmeFlags)
+                            if event.data2 > 0:
+                                if event.data1 == 0x60:
+                                    mixer.setActiveTrack(mixer.trackNumber() - 1)
+                                elif event.data1 == 0x61:
+                                    mixer.setActiveTrack(mixer.trackNumber() + 1)
                         else:
                             if event.data2 > 0:
                                 event.inEv = ArrowStepT[event.data1 -
@@ -550,6 +553,7 @@ class TMackieCU(common.TMackieCU_Base):
     #############################################################################################################################
 
     def Jog(self, event):
+        print(hex(self.JogSource))
         if self.JogSource == 0:
             transport.globalTransport(midi.FPT_Jog + int(self.Shift ^ self.Scrub), event.outEv, event.pmeFlags) # relocate
         elif self.JogSource == 0x46:
