@@ -12,6 +12,7 @@ README TO-DO
 * Review progress bars on the bottom of displays.
 * Section button?
 * In MASTER mode fader #2 switches from channel 1 to channel 8, same as the rotary encoder. Firmware bug?
+* Jog() needs reviewing
 
 ## Features
 * Assign stereo width mode to some button.
