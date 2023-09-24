@@ -10,21 +10,16 @@ README TO-DO
 
 ## Bugs
 * Review progress bars on the bottom of displays.
-* Review the rotary control on the top left.
-* Solo clear not working correctly.
-* Mute clear not working correctly.
-* Loop button?
-* Scroll button controls time position instead of zoom? Check if latter is possible in FL.
 * Section button?
-* Marker button - move to marker doesn't work.
+* In MASTER mode fader #2 switches from channel 1 to channel 8, same as the rotary encoder. Firmware bug?
 
 ## Features
 * Assign stereo width mode to some button.
 * Assign EQ mode to some button.
 * Utilize SHIFT for extra features.
 * * SHIFT+Fader resets the fader?
-* Find better use for F# buttons.
+* Function buttons.
+* Rewrite to use Studio One mode? Seems better at a glance, but is it worth the effort?
 
 ## Code quality
 * README
-* Extract duplicate parts of OnMidiMsg to common.py, see how it can be refactored for clarity.
