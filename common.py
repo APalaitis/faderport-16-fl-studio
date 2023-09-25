@@ -308,14 +308,14 @@ class TMackieCU_Base():
         self.SmoothSpeed = 469
         self.Clicking = True
 
-        # device.setHasMeters()
+        device.setHasMeters()
         self.LastTimeMsg = bytearray(10)
-        # self.SetBackLight(2)  # backlight timeout to 2 minutes
-        # self.UpdateClicking()
-        # self.UpdateMeterMode()
-        # self.SetPage(self.Page)
-        # ui.setHintMsg(device.getName())    
-        # self.RegisteDefaultMidiListeners()
+        self.SetBackLight(2)  # backlight timeout to 2 minutes
+        self.UpdateClicking()
+        self.UpdateMeterMode()
+        self.SetPage(self.Page)
+        ui.setHintMsg(device.getName())    
+        self.RegisteDefaultMidiListeners()
 
     #############################################################################################################################
     #                                                                                                                           #
