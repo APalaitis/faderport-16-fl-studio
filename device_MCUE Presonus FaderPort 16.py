@@ -76,20 +76,16 @@ class TMackieCU(common.TMackieCU_Base):
             arrangement.jumpToMarker(1, False)
 
     def handleStop(self, event):
-        transport.globalTransport(midi.FPT_Stop, int(
-            event.data2 > 0) * 2, event.pmeFlags)
+        transport.globalTransport(midi.FPT_Stop, 1, event.pmeFlags)
 
     def handlePlay(self, event):
-        transport.globalTransport(midi.FPT_Play, int(
-            event.data2 > 0) * 2, event.pmeFlags)
+        transport.globalTransport(midi.FPT_Play, 1, event.pmeFlags)
 
     def handleRecord(self, event):
-        transport.globalTransport(midi.FPT_Record, int(
-            event.data2 > 0) * 2, event.pmeFlags)
+        transport.globalTransport(midi.FPT_Record, 1, event.pmeFlags)
 
     def handleLoop(self, event):
-        transport.globalTransport(midi.FPT_Loop, int(
-            event.data2 > 0) * 2, event.pmeFlags)
+        transport.globalTransport(midi.FPT_Loop, 1, event.pmeFlags)
         
     def handleJogSources(self, event):
         self.SetJogSource(event.data1)
