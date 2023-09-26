@@ -96,10 +96,11 @@ class TMackieCU(common.TMackieCU_Base):
             mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
 
     def handleRotaryEncoder(self, event):
-        if self.JogSource == common.Jog_Master:
-            mixer.automateEvent(midi.REC_MainVol, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
-        elif self.JogSource == common.Jog_Marker:
-            arrangement.addAutoTimeMarker(arrangement.currentTime(False), "New marker")
+        if self.Page in [common.Page_Pan, common.Page_Volume, common.Page_Sends, common.Page_Stereo]:
+            if self.JogSource == common.Jog_Master:
+                mixer.automateEvent(midi.REC_MainVol, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
+            elif self.JogSource == common.Jog_Marker:
+                arrangement.addAutoTimeMarker(arrangement.currentTime(False), "New marker")
 
 
 

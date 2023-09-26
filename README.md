@@ -12,7 +12,6 @@ README TO-DO
 # To Do
 
 ## Bugs
-* Review progress bars on the bottom of displays.
 * Section button?
 
 ## Features
@@ -20,6 +19,7 @@ README TO-DO
 * Assign EQ mode to some button.
 * Utilize SHIFT for extra features.
 * Function buttons.
+* Sends page - if send to # is not active, set the fader to 0.
 
 ## Code quality
 * README
