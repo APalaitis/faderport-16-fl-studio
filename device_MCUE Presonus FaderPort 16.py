@@ -1,6 +1,5 @@
 ###########################################################
 # name=MCUE Presonus FaderPort 16
-# receiveFrom=MCUE Presonus FaderPort 16 Extender
 # supportedDevices=PreSonus FP16
 # url=https://forum.image-line.com/viewtopic.php?f=1994&t=254916#p1607888
 ###########################################################
@@ -36,45 +35,23 @@ class TMackieCU(common.TMackieCU_Base):
 
         for key in common.FunctionButtons:
             self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleFunctionButtons)
-        for key in common.ArrowButtons:
-            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleArrowButtons)
-        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x5B, True), self.handleArrowKeyLeft)
-        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, 0x5C, True), self.handleArrowKeyRight)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_Stop, True), self.handleStop)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_Play, True), self.handlePlay)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_Record, True), self.handleRecord)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_Loop, True), self.handleLoop)
         for key in common.JogSourceButtons:
             self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleJogSources)
-        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_LShift, False), self.handleShift)
+        for key in common.ShiftButtons:
+            self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, False), self.handleShift)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_Metronome, True), self.handleMetronome)
-        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_Clear, False), self.handleSoloMuteClear)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_ClearSolo, True), self.handleSoloClear)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_ClearMute, True), self.handleMuteClear)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, common.B_PanParam, True), self.handlePanParam)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, common.B_RotaryEncoder, True), self.handleRotaryEncoder)
 
     def handleFunctionButtons(self, event):
         return
     
-    def handleArrowButtons(self, event):
-        if event.data1 == 0x60:
-            transport.globalTransport(
-                midi.FPT_VZoomJog + int(self.Shift), -1, event.pmeFlags)
-        elif event.data1 == 0x61:
-            transport.globalTransport(
-                midi.FPT_VZoomJog + int(self.Shift), 1, event.pmeFlags)
-        elif event.data1 == 0x62:
-            transport.globalTransport(
-                midi.FPT_HZoomJog + int(self.Shift), -1, event.pmeFlags)
-        elif event.data1 == 0x63:
-            transport.globalTransport(
-                midi.FPT_HZoomJog + int(self.Shift), 1, event.pmeFlags)
-
-    def handleArrowKeyLeft(self, event):
-        if (event.data1 == 0x5B):
-            arrangement.jumpToMarker(-1, False)
-
-    def handleArrowKeyRight(self, event):
-        if (event.data1 == 0x5C):
-            arrangement.jumpToMarker(1, False)
-
     def handleStop(self, event):
         transport.globalTransport(midi.FPT_Stop, 1, event.pmeFlags)
 
@@ -89,10 +66,10 @@ class TMackieCU(common.TMackieCU_Base):
         
     def handleJogSources(self, event):
         self.SetJogSource(event.data1)
-        self.Jog(event)  # for visual feedback
 
     def handleShift(self, event):
         self.Shift = event.data2 > 0
+        self.UpdateCommonLEDs()
 
     def handleMetronome(self, event):
         transport.globalTransport(
@@ -102,8 +79,29 @@ class TMackieCU(common.TMackieCU_Base):
         else:
             self.SendMsg2("Metronome is Disabled")
 
-    def handleSoloMuteClear(self, event):
-        self.soloMuteClear = event.data2 > 0
+    def handleSoloClear(self, event):
+        for track in range(0, mixer.trackCount()):
+            mixer.soloTrack(track, 0)
+
+    def handleMuteClear(self, event):
+        for track in range(0, mixer.trackCount()):
+            mixer.muteTrack(track, 0)
+    
+    def handlePanParam(self, event):
+        if self.Page == common.Page_Volume:
+            eventId = midi.REC_Mixer_Pan + mixer.getTrackPluginId(mixer.trackNumber(), 0)
+            mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.5), midi.REC_MIDIController, self.SmoothSpeed)
+        if self.Page == common.Page_Pan:
+            eventId = midi.REC_Mixer_Vol + mixer.getTrackPluginId(mixer.trackNumber(), 0)
+            mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
+
+    def handleRotaryEncoder(self, event):
+        if self.JogSource == common.Jog_Master:
+            mixer.automateEvent(midi.REC_MainVol, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
+        elif self.JogSource == common.Jog_Marker:
+            arrangement.addAutoTimeMarker(arrangement.currentTime(False), "New marker")
+
+
 
 MackieCU = TMackieCU()
 
@@ -111,22 +109,17 @@ MackieCU = TMackieCU()
 def OnInit():
     MackieCU.OnInit()
 
-
 def OnDeInit():
     MackieCU.OnDeInit()
-
 
 def OnDirtyMixerTrack(SetTrackNum):
     MackieCU.OnDirtyMixerTrack(SetTrackNum)
 
-
 def OnRefresh(Flags):
     MackieCU.OnRefresh(Flags)
 
-
 def OnMidiMsg(event):
     MackieCU.OnMidiMsg(event)
-
 
 def SendMsg2(Msg, Duration=1000):
     MackieCU.SendMsg2(Msg, Duration)
@@ -134,14 +127,11 @@ def SendMsg2(Msg, Duration=1000):
 def OnSendTempMsg(Msg, Duration=1000):
     MackieCU.OnSendTempMsg(Msg, Duration)
 
-
 def OnUpdateBeatIndicator(Value):
     MackieCU.OnUpdateBeatIndicator(Value)
 
-
 def OnUpdateMeters():
     MackieCU.OnUpdateMeters()
-
 
 def OnIdle():
     MackieCU.OnIdle()
