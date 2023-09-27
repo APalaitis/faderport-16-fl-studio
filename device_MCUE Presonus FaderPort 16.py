@@ -26,12 +26,12 @@ import common
 # CLASS FOR GENERAL FUNCTIONALITY
 ##################################
 
-class TMackieCU(common.TMackieCU_Base):
+class TMackieCU(common.Faderport16):
     def __init__(self):
-        common.TMackieCU_Base.__init__(self, False)
+        common.Faderport16.__init__(self, False)
 
     def OnInit(self):
-        common.TMackieCU_Base.OnInit(self)
+        common.Faderport16.OnInit(self)
 
         for key in common.FunctionButtons:
             self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleFunctionButtons)
@@ -48,6 +48,7 @@ class TMackieCU(common.TMackieCU_Base):
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System, common.B_ClearMute, True), self.handleMuteClear)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, common.B_PanParam, True), self.handlePanParam)
         self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, common.B_RotaryEncoder, True), self.handleRotaryEncoder)
+        self.RegisterMidiListener(self.EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, common.B_Bypass, True), self.handleBypass)
 
     def handleFunctionButtons(self, event):
         return
@@ -70,6 +71,7 @@ class TMackieCU(common.TMackieCU_Base):
     def handleShift(self, event):
         self.Shift = event.data2 > 0
         self.UpdateCommonLEDs()
+        self.UpdateMixer_Sel()
 
     def handleMetronome(self, event):
         transport.globalTransport(
@@ -91,16 +93,18 @@ class TMackieCU(common.TMackieCU_Base):
         if self.Page == common.Page_Volume:
             eventId = midi.REC_Mixer_Pan + mixer.getTrackPluginId(mixer.trackNumber(), 0)
             mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.5), midi.REC_MIDIController, self.SmoothSpeed)
-        if self.Page == common.Page_Pan:
+        elif self.Page == common.Page_Pan:
             eventId = midi.REC_Mixer_Vol + mixer.getTrackPluginId(mixer.trackNumber(), 0)
             mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
 
     def handleRotaryEncoder(self, event):
-        if self.Page in [common.Page_Pan, common.Page_Volume, common.Page_Sends, common.Page_Stereo]:
-            if self.JogSource == common.Jog_Master:
-                mixer.automateEvent(midi.REC_MainVol, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
-            elif self.JogSource == common.Jog_Marker:
-                arrangement.addAutoTimeMarker(arrangement.currentTime(False), "New marker")
+        if self.JogSource == common.Jog_Master:
+            mixer.automateEvent(midi.REC_MainVol, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
+        elif self.JogSource == common.Jog_Marker:
+            arrangement.addAutoTimeMarker(arrangement.currentTime(False), "New marker")
+
+    def handleBypass(self, event):
+        mixer.enableTrackSlots(mixer.trackNumber(), not mixer.isTrackSlotsEnabled(mixer.trackNumber()))
 
 
 
