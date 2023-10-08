@@ -100,7 +100,6 @@ class Faders(Abstract):
     def UpdateCol(self, Num):
         data1 = 0
         data2 = 0
-        center = 0
 
         if device.isAssigned():
             # AP: By default, values come from REC events
@@ -120,30 +119,6 @@ class Faders(Abstract):
             # elif linkValue > -1 and self.Page in [Page_Pan, Page_Volume]:
             #     sv = int(midi.FromMIDI_Max * linkValue)
 
-            if Num < self.TrackCount:
-                # V-Pot
-                center = self.ColT[Num].KnobCenter
-                if self.ColT[Num].KnobEventID >= 0:
-                    m = mixer.getEventValue(
-                        self.ColT[Num].KnobEventID, midi.MaxInt, False)
-                    if center < 0:
-                        if self.ColT[Num].KnobResetEventID == self.ColT[Num].KnobEventID:
-                            center = int(
-                                m != self.ColT[Num].KnobResetValue)
-                        else:
-                            center = int(
-                                sv != self.ColT[Num].KnobResetValue)
-
-                    if self.ColT[Num].KnobMode < 2:
-                        data1 = 1 + round(m * (10 / midi.FromMIDI_Max))
-                    else:
-                        data1 = round(m * (11 / midi.FromMIDI_Max))
-                    if self.ColT[Num].KnobMode > 3:
-                        data1 = (center << 6)
-                    else:
-                        data1 = data1 + \
-                            (self.ColT[Num].KnobMode << 4) + (center << 6)
-
             # slider
             # AP: If the control is linked, don't move the fader
             if not (linkValue > -1 and self.Page in [Page_Pan, Page_Volume]):
@@ -162,15 +137,8 @@ class Faders(Abstract):
         CurID = mixer.getTrackPluginId(mixer.trackNumber(), 0)
 
         for m in range(0, len(self.ColT)):
-            self.ColT[m].KnobPressEventID = -1
             ch = 'CH'+str(self.ColT[m].TrackNum).zfill(2) + ' - '
 
-            self.ColT[m].KnobEventID = -1
-            self.ColT[m].KnobResetEventID = -1
-            self.ColT[m].KnobResetValue = midi.FromMIDI_Max >> 1
-            self.ColT[m].KnobName = ''
-            self.ColT[m].KnobMode = 1  # parameter, pan, volume, off
-            self.ColT[m].KnobCenter = -1
             self.ColT[m].TrackName = ''
             self.ColT[m].BaseEventID = mixer.getTrackPluginId(self.ColT[m].TrackNum, 0)
             self.ColT[m].TrackNum = midi.TrackNum_Master + ((f + m) % mixer.trackCount())
@@ -210,42 +178,17 @@ class Faders(Abstract):
                         paramIndex = m + self.PluginParamOffset + (self.TrackCount if self.isExtension else 0)
                         if paramIndex < plugins.getParamCount(self.PluginTrack, pluginIndex):
                             self.ColT[m].TrackName = plugins.getParamName(paramIndex, self.PluginTrack, pluginIndex)
-                        self.ColT[m].KnobMode = 2
-                        self.ColT[m].KnobEventID = self.ColT[m].CurID + midi.REC_PlugReserved
             elif self.Page == Page_EQ:
                 if m < 3:
                     # gain & freq
                     self.ColT[m].SliderEventID = CurID + midi.REC_Mixer_EQ_Gain + m
-                    self.ColT[m].KnobResetEventID = self.ColT[m].SliderEventID
                     self.ColT[m].SliderName = mixer.getEventIDName(self.ColT[m].SliderEventID)
-                    self.ColT[m].KnobEventID = CurID + midi.REC_Mixer_EQ_Freq + m
-                    self.ColT[m].KnobName = mixer.getEventIDName(self.ColT[m].KnobEventID)
-                    self.ColT[m].KnobResetValue = midi.FromMIDI_Max >> 1
-                    self.ColT[m].KnobCenter = -2
-                    self.ColT[m].KnobMode = 0
                 elif m < 6:
                     # Q
                     self.ColT[m].SliderEventID = CurID + midi.REC_Mixer_EQ_Q + m - 3
-                    self.ColT[m].KnobResetEventID = self.ColT[m].SliderEventID
                     self.ColT[m].SliderName = mixer.getEventIDName(self.ColT[m].SliderEventID)
-                    self.ColT[m].KnobEventID = self.ColT[m].SliderEventID
-                    self.ColT[m].KnobName = self.ColT[m].SliderName
-                    self.ColT[m].KnobResetValue = 17500
-                    self.ColT[m].KnobCenter = -1
-                    self.ColT[m].KnobMode = 2
                 else:
                     self.ColT[m].SliderEventID = -1
-                    self.ColT[m].KnobEventID = -1
-                    self.ColT[m].KnobMode = 4
-
-                self.ColT[m].KnobEventID, self.ColT[m].SliderEventID = utils.SwapInt(self.ColT[m].KnobEventID, self.ColT[m].SliderEventID)
-                self.ColT[m].SliderName = self.ColT[m].KnobName
-                self.ColT[m].KnobName = self.ColT[m].SliderName
-                self.ColT[m].KnobMode = 2
-                if not (self.Page in [Page_Pan, Page_FX, Page_EQ, Page_Volume]):
-                    self.ColT[m].KnobCenter = -1
-                    self.ColT[m].KnobResetValue = round(12800 * midi.FromMIDI_Max / 16000)
-                    self.ColT[m].KnobResetEventID = self.ColT[m].KnobEventID
 
             self.ColT[m].LastValueIndex = 48 + m * 6
             self.ColT[m].Peak = 0

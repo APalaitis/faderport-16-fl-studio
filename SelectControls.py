@@ -25,12 +25,21 @@ class SelectControls(Abstract):
     
     def handleSelectButtons(self, event):
         index = SelectButtons.index(event.data1)
+        event.handled = True
         if self.Page in [Page_Volume, Page_Pan]:
             if self.Shift:
                 if self.Page == Page_Volume:
                     mixer.setTrackVolume(self.ColT[index].TrackNum, 0.8)
                 else:
                     mixer.setTrackPan(self.ColT[index].TrackNum, 0)
+            elif self.armMode:
+                mixer.armTrack(self.ColT[index].TrackNum)
+                if mixer.isTrackArmed(self.ColT[index].TrackNum):
+                    self.SendMsg2(mixer.getTrackName(
+                        self.ColT[index].TrackNum) + ' recording to ' + mixer.getTrackRecordingFileName(self.ColT[index].TrackNum))
+                else:
+                    self.SendMsg2(mixer.getTrackName(
+                        self.ColT[index].TrackNum) + ' unarmed')
             else:
                 ui.showWindow(midi.widMixer)
                 ui.setFocused(midi.widMixer)
@@ -46,7 +55,6 @@ class SelectControls(Abstract):
                     self.UpdateColT()
                     self.UpdateLEDs()
                     self.UpdateTextDisplay()
-                    return
             else:
                 # AP: Ignore button presses, there's no functionality that makes sense in this case
                 pass
@@ -58,17 +66,6 @@ class SelectControls(Abstract):
                 toTrack,
                 not mixer.getRouteSendActive(fromTrack, toTrack)
             )
-
-    def handleArm(self, event):
-        if (self.Page in [Page_Pan, Page_Volume]):
-            mixer.armTrack(self.ColT[event.data1].TrackNum)
-            if mixer.isTrackArmed(self.ColT[event.data1].TrackNum):
-                self.SendMsg2(mixer.getTrackName(
-                    self.ColT[event.data1].TrackNum) + ' recording to ' + mixer.getTrackRecordingFileName(self.ColT[event.data1].TrackNum), 2500)
-            else:
-                self.SendMsg2(mixer.getTrackName(
-                    self.ColT[event.data1].TrackNum) + ' unarmed')
-
 
     def UpdateSelectLEDs(self):
         for index in range(0, self.TrackCount):
@@ -89,6 +86,9 @@ class SelectControls(Abstract):
                 if self.Shift:
                     rgb = [0x0, 0x5F, 0x0]
                     state = True
+                elif self.armMode:
+                    rgb = [0xFF, 0x0, 0x0]
+                    state = mixer.isTrackArmed(self.ColT[index].TrackNum)
                 else:
                     if self.Page == Page_Sends:
                         state = mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[index].TrackNum) or (index == mixer.trackNumber())

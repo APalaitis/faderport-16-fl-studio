@@ -32,6 +32,11 @@ class Pages(Abstract):
             device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
 
     def SetPage(self, Value):
+        # AP: Close the last known plugin window when moving out of the FX page.
+        if self.Page == Page_FX and self.CurPluginID > -1:
+            mixer.focusEditor(self.PluginTrack, self.CurPluginID)
+            transport.globalTransport(midi.FPT_Escape, 1)
+
         self.Page = Value
 
         self.FirstTrack = False

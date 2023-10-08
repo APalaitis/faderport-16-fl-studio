@@ -10,38 +10,31 @@ class Abstract():
     isExtension = False
     SliderHoldCount = 0
     TrackCount = 16
-    JogSource = Jog_Master
+    JogSource = Jog_Channel
     Shift = False
     TempMsgCount = 0
     FirstTrackT = [0, 0]
-    ColT = [0 for x in range(TrackCount)]
+    ColT = [0] * TrackCount
     CurPluginID = -1
     PluginTrack = 0
     linkMode = False
+    armMode = False
     Page = Page_Volume
     SmoothSpeed = 0
     MeterMax = 0
+    lastSoloTrack = -1
+
+    def SendMsg2(msg): return
+    def UpdateColT(): return
+    def UpdateTextDisplay(): return
+    def OnMidiMsg(self, event): return
+    def handleResponsiveButtonLED(self, event): return
 
     def RegisterMidiListener(self, eventInfo: EventInfo, callback):
         self.midiListeners.append([eventInfo, callback])
 
     def RegisterLEDUpdate(self, callback):
         self.ledUpdates.append(callback)
-
-    def OnMidiMsg(self, event):
-        for listener in self.midiListeners:
-            eventInfo = listener[0]
-            callback = listener[1]
-            shouldRun = (event.midiId == eventInfo.midiId and callable(callback)) \
-                and (not eventInfo.pmeFlags or event.pmeFlags & eventInfo.pmeFlags != 0) \
-                and (not isinstance(eventInfo.data1, int) or event.data1 == eventInfo.data1) \
-                and (not eventInfo.data2NonZero or event.data2 > 0)
-            if shouldRun:
-                if (event.pmeFlags & midi.PME_System_Safe != 0):
-                    event.handled = True
-                callback(event)
-            elif (event.midiId == midi.MIDI_NOTEOFF or event.pmeFlags & midi.PME_System_Safe == 0):
-                event.handled = False
 
     def UpdateLEDs(self):
         for update in self.ledUpdates:

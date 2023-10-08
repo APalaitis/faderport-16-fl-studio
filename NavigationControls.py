@@ -20,8 +20,10 @@ class NavigationControls(Abstract):
     def __init__(self):
         self.RegisterMidiListener(EventInfo(midi.MIDI_CONTROLCHANGE, 0, CC1_RotaryEncoder), self.handleNavigationKnob)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_RotaryEncoder, True), self.handleNavigationKnobClick)
-        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_ArrowLeft, True), self.handleArrowButtons)
-        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_ArrowRight, True), self.handleArrowButtons)
+        for key in [B_ArrowLeft, B_ArrowRight]:
+            self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleArrowButtons)
+            self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, False), self.handleResponsiveButtonLED)
+
 
 
     def handleNavigationKnob(self, event):

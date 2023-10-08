@@ -336,3 +336,27 @@ class Base(
 
         device.midiOutMsg(value << 16 | valueMessage << 8 | 0xB0)
         device.midiOutMsg(mode << 16 | modeMessage << 8 | 0xB0)
+
+    #############################################################################################################################
+    #                                                                                                                           #
+    #   HANDLE MIDI EVENTS                                                                                                      #
+    #                                                                                                                           #
+    #############################################################################################################################
+
+    def OnMidiMsg(self, event):
+        for listener in self.midiListeners:
+            eventInfo = listener[0]
+            callback = listener[1]
+            shouldRun = (event.midiId == eventInfo.midiId and callable(callback)) \
+                and (not eventInfo.pmeFlags or event.pmeFlags & eventInfo.pmeFlags != 0) \
+                and (not isinstance(eventInfo.data1, int) or event.data1 == eventInfo.data1) \
+                and (not eventInfo.data2NonZero or event.data2 > 0)
+            if shouldRun:
+                if (event.pmeFlags & midi.PME_System_Safe != 0):
+                    event.handled = True
+                callback(event)
+            elif (event.midiId == midi.MIDI_NOTEOFF or event.pmeFlags & midi.PME_System_Safe == 0):
+                event.handled = False
+
+    def handleResponsiveButtonLED(self, event):
+        device.midiOutMsg((event.data1 << 8) + midi.TranzPort_OffOnT[event.data2 > 0])

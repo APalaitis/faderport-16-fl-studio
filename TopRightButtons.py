@@ -18,10 +18,14 @@ from Abstract import Abstract
 
 class TopRightButtons(Abstract):
     def __init__(self):
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Save, True), self.handleSave)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Redo, True), self.handleRedo)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Undo, True), self.handleUndo)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_User1, True), self.handleUser1)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_User2, True), self.handleUser2)
-        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Save, True), self.handleSave)
-        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Link, True), self.handleLink)
+
+        for key in [B_Save, B_Redo, B_Undo, B_User1, B_User2, B_User3]:
+            self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, False), self.handleResponsiveButtonLED)
 
     def handleUser1(self, event):
         self.SetPage(Page_Stereo)
@@ -30,17 +34,10 @@ class TopRightButtons(Abstract):
         self.SetPage(Page_EQ)
 
     def handleSave(self, event):
-        transport.globalTransport(
-            midi.FPT_Save + int(self.Shift), int(event.data2 > 0) * 2, event.pmeFlags)
+        transport.globalTransport(midi.FPT_Save, 1, event.pmeFlags)
         
-    def handleLink(self, event):
-        if self.Shift:
-            for index in range(0, self.TrackCount):
-                device.linkToLastTweaked(0, index + 1)
-            self.UpdateLEDs()
-            self.UpdateTextDisplay()
-            self.UpdateColT()
-            self.SendMsg2('Unlinked last tweaked parameter')
-        else:
-            self.linkMode = not self.linkMode
-            self.UpdateLEDs()
+    def handleRedo(self, event):
+        transport.globalTransport(midi.FPT_UndoJog, 1, event.pmeFlags)
+
+    def handleUndo(self, event):
+        transport.globalTransport(midi.FPT_UndoJog, -1, event.pmeFlags)

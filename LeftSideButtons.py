@@ -23,6 +23,11 @@ class LeftSideButtons(Abstract):
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_ClearSolo, True), self.handleSoloClear)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_ClearMute, True), self.handleMuteClear)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Bypass, True), self.handleBypass)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Arm, True), self.handleArmMode)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Link, True), self.handleLink)
+
+        for key in [B_ClearSolo, B_ClearMute]:
+            self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, False), self.handleResponsiveButtonLED)
 
         self.RegisterLEDUpdate(self.UpdateLeftSideLEDs)
 
@@ -30,11 +35,10 @@ class LeftSideButtons(Abstract):
     def handleShift(self, event):
         self.Shift = event.data2 > 0
         self.UpdateLEDs()
-        self.UpdateMixer_Sel()
 
     def handleSoloClear(self, event):
-        for track in range(0, mixer.trackCount()):
-            mixer.soloTrack(track, 0)
+        if self.lastSoloTrack != -1:
+            mixer.soloTrack(self.lastSoloTrack, 0)
 
     def handleMuteClear(self, event):
         for track in range(0, mixer.trackCount()):
@@ -42,6 +46,22 @@ class LeftSideButtons(Abstract):
     
     def handleBypass(self, event):
         mixer.enableTrackSlots(mixer.trackNumber(), not mixer.isTrackSlotsEnabled(mixer.trackNumber()))
+
+    def handleArmMode(self, event):
+        self.armMode = not self.armMode
+        self.UpdateLEDs()
+
+    def handleLink(self, event):
+        if self.Shift:
+            for index in range(0, self.TrackCount):
+                device.linkToLastTweaked(0, index + 1)
+            self.UpdateLEDs()
+            self.UpdateTextDisplay()
+            self.UpdateColT()
+            self.SendMsg2('Unlinked last tweaked parameter')
+        else:
+            self.linkMode = not self.linkMode
+            self.UpdateLEDs()
 
     def UpdateLeftSideLEDs(self):
         # Link button
@@ -61,4 +81,7 @@ class LeftSideButtons(Abstract):
 
         # Shift button
         for key in ShiftButtons:
-                device.midiOutNewMsg((key << 8) + midi.TranzPort_OffOnT[self.Shift], 33)
+            device.midiOutNewMsg((key << 8) + midi.TranzPort_OffOnT[self.Shift], 33)
+
+        # Arm button
+        device.midiOutNewMsg((B_Arm << 8) + midi.TranzPort_OffOnT[self.armMode], 33)

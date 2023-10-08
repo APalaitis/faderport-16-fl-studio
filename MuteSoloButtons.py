@@ -30,8 +30,8 @@ class MuteSoloButtons(Abstract):
         if (self.Page in [Page_Pan, Page_Volume]):
             i = SoloButtons.index(event.data1)
             self.ColT[i].solomode = midi.fxSoloModeWithDestTracks
-            mixer.soloTrack(self.ColT[i].TrackNum,
-                midi.fxSoloToggle, self.ColT[i].solomode)
+            mixer.soloTrack(self.ColT[i].TrackNum, midi.fxSoloToggle, self.ColT[i].solomode)
+            self.lastSoloTrack = self.ColT[i].TrackNum
 
     def handleMute(self, event):
         index = MuteButtons.index(event.data1)
