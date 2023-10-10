@@ -204,7 +204,7 @@ class Base(
     #   SEND A SECONDARY MESSAGE                                                                                                #
     #                                                                                                                           #
     #############################################################################################################################
-    def SendMsg2(self, Msg):
+    def SendMsgToFL(self, Msg):
         if len(Msg)>2:
             ui.setHintMsg((Msg+' '*56)[0:56])
     
@@ -347,16 +347,15 @@ class Base(
         for listener in self.midiListeners:
             eventInfo = listener[0]
             callback = listener[1]
+            setEventHandled = listener[2]
             shouldRun = (event.midiId == eventInfo.midiId and callable(callback)) \
                 and (not eventInfo.pmeFlags or event.pmeFlags & eventInfo.pmeFlags != 0) \
                 and (not isinstance(eventInfo.data1, int) or event.data1 == eventInfo.data1) \
                 and (not eventInfo.data2NonZero or event.data2 > 0)
             if shouldRun:
-                if (event.pmeFlags & midi.PME_System_Safe != 0):
-                    event.handled = True
                 callback(event)
-            elif (event.midiId == midi.MIDI_NOTEOFF or event.pmeFlags & midi.PME_System_Safe == 0):
-                event.handled = False
+                if setEventHandled:
+                    event.handled = True
 
     def handleResponsiveButtonLED(self, event):
         device.midiOutMsg((event.data1 << 8) + midi.TranzPort_OffOnT[event.data2 > 0])

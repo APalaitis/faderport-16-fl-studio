@@ -24,8 +24,6 @@ class NavigationControls(Abstract):
             self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, True), self.handleArrowButtons)
             self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, False), self.handleResponsiveButtonLED)
 
-
-
     def handleNavigationKnob(self, event):
         if self.JogSource == Jog_Marker:
             transport.globalTransport(midi.FPT_Jog, 1 if event.data2 < CC2_DirectionThreshold else -1, event.pmeFlags)
@@ -37,12 +35,10 @@ class NavigationControls(Abstract):
             delta = -1 if event.data2 > CC2_DirectionThreshold else 1
             self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] + delta)
         elif self.JogSource == Jog_Master:
-            delta = int((midi.MaxInt / -100) if event.data2 > CC2_DirectionThreshold else (midi.MaxInt / 100))
+            delta = int((midi.MaxInt / -75) if event.data2 > CC2_DirectionThreshold else (midi.MaxInt / 75))
             mixer.automateEvent(midi.REC_MainVol, mixer.getEventValue(midi.REC_MainVol) + delta, midi.REC_MIDIController, self.SmoothSpeed)
         elif self.JogSource == Jog_Section:
             pass
-
-        event.handled = True
 
     def handleNavigationKnobClick(self, event):
         if self.JogSource == Jog_Master:

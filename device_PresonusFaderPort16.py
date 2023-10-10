@@ -48,7 +48,7 @@ def OnMidiMsg(event):
     Faderport16Impl.OnMidiMsg(event)
 
 def SendMsg2(Msg, Duration=1000):
-    Faderport16Impl.SendMsg2(Msg, Duration)
+    Faderport16Impl.SendMsgToFL(Msg, Duration)
 
 def OnUpdateBeatIndicator(Value):
     Faderport16Impl.OnUpdateBeatIndicator(Value)

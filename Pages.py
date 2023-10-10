@@ -28,7 +28,7 @@ class Pages(Abstract):
         pageIndex = PageSelectors.index(event.data1)
         self.SetPage(pageIndex)
         if not self.isExtension:
-            self.SendMsg2(PageNames[pageIndex])
+            self.SendMsgToFL(PageNames[pageIndex])
             device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
 
     def SetPage(self, Value):

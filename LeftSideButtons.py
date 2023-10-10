@@ -58,7 +58,7 @@ class LeftSideButtons(Abstract):
             self.UpdateLEDs()
             self.UpdateTextDisplay()
             self.UpdateColT()
-            self.SendMsg2('Unlinked last tweaked parameter')
+            self.SendMsgToFL('Unlinked last tweaked parameter')
         else:
             self.linkMode = not self.linkMode
             self.UpdateLEDs()

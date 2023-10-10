@@ -32,9 +32,9 @@ class NavigationButtons(Abstract):
         transport.globalTransport(
             midi.FPT_Metronome, 1, event.pmeFlags)
         if (ui.isMetronomeEnabled):
-            self.SendMsg2("Metronome is Enabled")
+            self.SendMsgToFL("Metronome is Enabled")
         else:
-            self.SendMsg2("Metronome is Disabled")
+            self.SendMsgToFL("Metronome is Disabled")
 
     def UpdateJogLEDs(self):
         for jogKey in JogSourceButtons:

@@ -18,7 +18,7 @@ from Abstract import Abstract
 
 class Faders(Abstract):
     def __init__(self):
-        self.RegisterMidiListener(EventInfo(midi.MIDI_PITCHBEND), self.handleFaders)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_PITCHBEND), self.handleFaders, False)
         for key in FaderHold:
             self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, None, key, True), self.sliderHold)
 
@@ -35,6 +35,7 @@ class Faders(Abstract):
         ]
     
     def handleFaders(self, event):
+        event.handled = True
         index = event.midiChan
 
         if self.linkMode:
@@ -66,16 +67,14 @@ class Faders(Abstract):
                 if paramIndex < count:
                     level = self.AlphaTrack_SliderToLevel(event.inEv) / midi.FromMIDI_Max
                     plugins.setParamValue(level, paramIndex, self.PluginTrack, int(self.CurPluginID + self.CurPluginOffset))
-                    event.handled = True
                     self.UpdateColT()
                     # hint
-                    self.SendMsg2(
+                    self.SendMsgToFL(
                         plugins.getParamName(paramIndex, self.PluginTrack, int(self.CurPluginID + self.CurPluginOffset))
                         + ': '
                         + str(round(level, 2)))
         elif self.ColT[index].SliderEventID >= 0:
             # slider (mixer track volume)
-            event.handled = True
             mixer.automateEvent(self.ColT[index].SliderEventID, self.AlphaTrack_SliderToLevel(
                 event.inEv), midi.REC_MIDIController, self.SmoothSpeed)
             # hint
@@ -85,12 +84,10 @@ class Faders(Abstract):
                 self.ColT[index].SliderEventID, n)
             if s != '':
                 s = ': ' + s
-            self.SendMsg2(self.ColT[index].SliderName + s)
+            self.SendMsgToFL(self.ColT[index].SliderName + s)
 
     def sliderHold(self, event):
         self.SliderHoldCount += -1 + (int(event.data2 > 0) * 2)
-        event.handled = True
-
 
     #############################################################################################################################
     #                                                                                                                           #

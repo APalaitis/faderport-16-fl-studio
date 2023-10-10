@@ -24,14 +24,14 @@ class Abstract():
     MeterMax = 0
     lastSoloTrack = -1
 
-    def SendMsg2(msg): return
+    def SendMsgToFL(msg): return
     def UpdateColT(): return
     def UpdateTextDisplay(): return
     def OnMidiMsg(self, event): return
     def handleResponsiveButtonLED(self, event): return
 
-    def RegisterMidiListener(self, eventInfo: EventInfo, callback):
-        self.midiListeners.append([eventInfo, callback])
+    def RegisterMidiListener(self, eventInfo: EventInfo, callback, setEventHandled = True):
+        self.midiListeners.append([eventInfo, callback, setEventHandled])
 
     def RegisterLEDUpdate(self, callback):
         self.ledUpdates.append(callback)

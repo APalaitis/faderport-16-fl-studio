@@ -35,17 +35,17 @@ class SelectControls(Abstract):
             elif self.armMode:
                 mixer.armTrack(self.ColT[index].TrackNum)
                 if mixer.isTrackArmed(self.ColT[index].TrackNum):
-                    self.SendMsg2(mixer.getTrackName(
+                    self.SendMsgToFL(mixer.getTrackName(
                         self.ColT[index].TrackNum) + ' recording to ' + mixer.getTrackRecordingFileName(self.ColT[index].TrackNum))
                 else:
-                    self.SendMsg2(mixer.getTrackName(
+                    self.SendMsgToFL(mixer.getTrackName(
                         self.ColT[index].TrackNum) + ' unarmed')
             else:
                 ui.showWindow(midi.widMixer)
                 ui.setFocused(midi.widMixer)
                 self.UpdateLEDs()
                 mixer.setTrackNumber(self.ColT[index].TrackNum, midi.curfxScrollToMakeVisible | midi.curfxMinimalLatencyUpdate)
-                self.SendMsg2(mixer.getTrackName(self.ColT[index].TrackNum))
+                self.SendMsgToFL(mixer.getTrackName(self.ColT[index].TrackNum))
         elif self.Page == Page_FX:
             if self.CurPluginID == -1:
                 if plugins.isValid(mixer.trackNumber(), index):

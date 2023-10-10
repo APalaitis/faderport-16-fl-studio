@@ -27,23 +27,23 @@ class Windows(Abstract):
         self.RegisterLEDUpdate(self.UpdateWindowLEDs)
     
     def handleOpenPlaylist(self, event):
-        self.SendMsg2("Toggle playlist")
+        self.SendMsgToFL("Toggle playlist")
         self.toggleWindow(midi.widPlaylist)
 
     def handleOpenMixer(self, event):
-        self.SendMsg2("Toggle mixer")
+        self.SendMsgToFL("Toggle mixer")
         self.toggleWindow(midi.widMixer)
 
     def handleOpenChannelRack(self, event):
-        self.SendMsg2("Toggle channel rack")
+        self.SendMsgToFL("Toggle channel rack")
         self.toggleWindow(midi.widChannelRack)
 
     def handleOpenPianoRoll(self, event):
-        self.SendMsg2("Toggle piano roll")
+        self.SendMsgToFL("Toggle piano roll")
         self.toggleWindow(midi.widPianoRoll)
 
     def handleOpenBrowser(self, event):
-        self.SendMsg2("Toggle browser")
+        self.SendMsgToFL("Toggle browser")
         self.toggleWindow(midi.widBrowser)
 
     def toggleWindow(self, window):
