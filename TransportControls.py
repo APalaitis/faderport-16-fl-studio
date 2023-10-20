@@ -22,6 +22,11 @@ class TransportControls(Abstract):
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_Play, True), self.handlePlay)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_Record, True), self.handleRecord)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_Loop, True), self.handleLoop)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_RW, True), self.handleRewind)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_FF, True), self.handleFastForward)
+
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_RW), self.handleResponsiveButtonLED)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_FF), self.handleResponsiveButtonLED)
 
         self.RegisterLEDUpdate(self.UpdateTransportLEDs)
 
@@ -36,6 +41,12 @@ class TransportControls(Abstract):
 
     def handleLoop(self, event):
         transport.globalTransport(midi.FPT_Loop, 1, event.pmeFlags)
+
+    def handleRewind(self, event):
+        transport.globalTransport(midi.FPT_Jog, -1, event.pmeFlags)
+
+    def handleFastForward(self, event):
+        transport.globalTransport(midi.FPT_Jog, 1, event.pmeFlags)
 
     def UpdateTransportLEDs(self):
         device.midiOutNewMsg((B_Stop << 8) + midi.TranzPort_OffOnT[transport.isPlaying() == midi.PM_Stopped], 0)

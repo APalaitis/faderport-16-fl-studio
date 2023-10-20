@@ -120,6 +120,8 @@ class Base(
             self.TempMsgCount -= 1
             if self.TempMsgCount == 0:
                 self.UpdateTempMsg()
+        
+        device.midiOutMsg(0x0000A0)
 
     #############################################################################################################################
     #                                                                                                                           #
@@ -298,8 +300,9 @@ class Base(
                             line3 = tag + str(self.ColT[index].TrackNum).zfill(2)
 
             elif self.Page == Page_EQ:
-                line1 = "  Low    Med    High   Low    Med   High           Reset"
-                line2 = "  Freq   Freq   Freq   Width  Width Width           All "
+                if index < 7:
+                    line1 = ("Low","Med","High","Low","Med","High","Reset")[index]
+                    line2 = ("Freq","Freq","Freq","Width","Width","Width","All")[index]
             self.SendMsg(line1, index, 0)
             self.SendMsg(line2, index, 1)
             self.SendMsg(line3, index, 2)
