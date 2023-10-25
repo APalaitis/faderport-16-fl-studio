@@ -28,7 +28,6 @@ class Pages(Abstract):
         pageIndex = PageSelectors.index(event.data1)
         self.SetPage(pageIndex)
         if not self.isExtension:
-            self.SendMsgToFL(PageNames[pageIndex])
             device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
 
     def SetPage(self, Value):
@@ -38,6 +37,7 @@ class Pages(Abstract):
             transport.globalTransport(midi.FPT_Escape, 1)
 
         self.Page = Value
+        self.SendMsgToFL(f"Page: {PageNames[Value]}")
 
         self.FirstTrack = False
         receiverCount = device.dispatchReceiverCount()

@@ -351,14 +351,24 @@ class Base(
             eventInfo = listener[0]
             callback = listener[1]
             setEventHandled = listener[2]
-            shouldRun = (event.midiId == eventInfo.midiId and callable(callback)) \
-                and (not eventInfo.pmeFlags or event.pmeFlags & eventInfo.pmeFlags != 0) \
-                and (not isinstance(eventInfo.data1, int) or event.data1 == eventInfo.data1) \
-                and (not eventInfo.data2NonZero or event.data2 > 0)
-            if shouldRun:
-                callback(event)
-                if setEventHandled:
+            if (event.midiId == eventInfo.midiId) and (not isinstance(eventInfo.data1, int) or event.data1 == eventInfo.data1):
+                shouldRun = callable(callback) \
+                    and (not eventInfo.pmeFlags or event.pmeFlags & eventInfo.pmeFlags != 0) \
+                    and (not eventInfo.data2NonZero or event.data2 > 0)
+                if shouldRun:
+                    callback(event)
+                    if setEventHandled:
+                        event.handled = True
+                elif eventInfo.data2NonZero and setEventHandled:
                     event.handled = True
 
     def handleResponsiveButtonLED(self, event):
         device.midiOutMsg((event.data1 << 8) + midi.TranzPort_OffOnT[event.data2 > 0])
+
+    def automateEvent(self, eventId, value, smoothSpeed):
+        mixer.automateEvent(eventId, value, midi.REC_MIDIController, smoothSpeed)
+        eventName = mixer.getEventIDName(eventId)
+        stringValue = mixer.getEventIDValueString(eventId, mixer.getAutoSmoothEventValue(eventId)) \
+            or round(mixer.getEventValue(eventId, mixer.getAutoSmoothEventValue(eventId)) / midi.MaxInt * 2,)
+        self.SendMsgToFL(f"{eventName}: {stringValue}")
+

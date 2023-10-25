@@ -32,14 +32,23 @@ class MuteSoloButtons(Abstract):
             self.ColT[i].solomode = midi.fxSoloModeWithDestTracks
             mixer.soloTrack(self.ColT[i].TrackNum, midi.fxSoloToggle, self.ColT[i].solomode)
             self.lastSoloTrack = self.ColT[i].TrackNum
+            if mixer.isTrackSolo(self.ColT[i].TrackNum):
+                self.SendMsgToFL(f"CH{self.ColT[i].TrackNum} {mixer.getTrackName(self.ColT[i].TrackNum)} - solo on")
+            else:
+                self.SendMsgToFL(f"CH{self.ColT[i].TrackNum} {mixer.getTrackName(self.ColT[i].TrackNum)} - solo off")
+
 
     def handleMute(self, event):
         index = MuteButtons.index(event.data1)
         if (self.Page in [Page_Pan, Page_Volume]):
             mixer.enableTrack(self.ColT[index].TrackNum)
+            if mixer.isTrackEnabled(self.ColT[index].TrackNum):
+                self.SendMsgToFL(f"CH{self.ColT[index].TrackNum} {mixer.getTrackName(self.ColT[index].TrackNum)} - unmuted")
+            else:
+                self.SendMsgToFL(f"CH{self.ColT[index].TrackNum} {mixer.getTrackName(self.ColT[index].TrackNum)} - muted")
         elif self.Page == Page_FX and self.CurPluginID == -1 and index < 10:
             state = mixer.getEventValue(mixer.getTrackPluginId(self.PluginTrack, index) + midi.REC_Plug_Mute) > 0
-            mixer.automateEvent(
+            self.automateEvent(
                 mixer.getTrackPluginId(self.PluginTrack, index) + midi.REC_Plug_Mute,
                 0 if state else int(midi.MaxInt / 2),
                 self.SmoothSpeed

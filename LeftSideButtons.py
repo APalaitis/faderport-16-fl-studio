@@ -39,16 +39,28 @@ class LeftSideButtons(Abstract):
     def handleSoloClear(self, event):
         if self.lastSoloTrack != -1:
             mixer.soloTrack(self.lastSoloTrack, 0)
+        self.SendMsgToFL("All mixer tracks unsoloed")
 
     def handleMuteClear(self, event):
         for track in range(0, mixer.trackCount()):
             mixer.muteTrack(track, 0)
+        self.SendMsgToFL("All mixer tracks unmuted")
     
     def handleBypass(self, event):
-        mixer.enableTrackSlots(mixer.trackNumber(), not mixer.isTrackSlotsEnabled(mixer.trackNumber()))
+        state = not mixer.isTrackSlotsEnabled(mixer.trackNumber())
+        mixer.enableTrackSlots(mixer.trackNumber(), state)
+        if state:
+            self.SendMsgToFL(f"FX enabled for CH{mixer.trackNumber()} {mixer.getTrackName(mixer.trackNumber())}")
+        else:
+            self.SendMsgToFL(f"FX disabled for CH{mixer.trackNumber()} {mixer.getTrackName(mixer.trackNumber())}")
 
     def handleArmMode(self, event):
         self.armMode = not self.armMode
+        if self.armMode:
+            self.SendMsgToFL("Arming mode on - select tracks to be armed")
+        else:
+            self.SendMsgToFL("Arming mode off")
+
         self.UpdateLEDs()
 
     def handleLink(self, event):
@@ -62,6 +74,7 @@ class LeftSideButtons(Abstract):
         else:
             self.linkMode = not self.linkMode
             self.UpdateLEDs()
+            self.SendMsgToFL('Move a fader to assign it to the last tweaked parameter')
 
     def UpdateLeftSideLEDs(self):
         # Link button

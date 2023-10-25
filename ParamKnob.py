@@ -25,19 +25,23 @@ class ParamKnob(Abstract):
         delta = int((midi.MaxInt / -75) if event.data2 > CC2_DirectionThreshold else (midi.MaxInt / 75))
         if self.Page == Page_Volume:
             eventId = midi.REC_Mixer_Pan + mixer.getTrackPluginId(mixer.trackNumber(), 0)
-            mixer.automateEvent(eventId, mixer.getEventValue(eventId) + delta, midi.REC_MIDIController, self.SmoothSpeed)
+            value = min(int(midi.MaxInt / 2), max(0, mixer.getEventValue(eventId) + delta))
+            self.automateEvent(eventId, value, self.SmoothSpeed)
         elif self.Page == Page_Pan:
             eventId = midi.REC_Mixer_Vol + mixer.getTrackPluginId(mixer.trackNumber(), 0)
-            mixer.automateEvent(eventId, mixer.getEventValue(eventId) + delta, midi.REC_MIDIController, self.SmoothSpeed)
+            value = min(int(midi.MaxInt / 2), max(0, mixer.getEventValue(eventId) + delta))
+            self.automateEvent(eventId, mixer.getEventValue(eventId) + delta, self.SmoothSpeed)
         elif self.Page == Page_Sends:
             delta = -1 if event.data2 > CC2_DirectionThreshold else 1
-            mixer.setTrackNumber(mixer.trackNumber() + delta, midi.curfxScrollToMakeVisible | midi.curfxMinimalLatencyUpdate)
+            track = mixer.trackNumber() + delta
+            mixer.setTrackNumber(track, midi.curfxScrollToMakeVisible | midi.curfxMinimalLatencyUpdate)
+            self.SendMsgToFL("Channel selected: " + mixer.getTrackName(track))
 
     def handleParamKnobClick(self, event):
         if self.Page == Page_Volume:
             eventId = midi.REC_Mixer_Pan + mixer.getTrackPluginId(mixer.trackNumber(), 0)
-            mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.5), midi.REC_MIDIController, self.SmoothSpeed)
+            self.automateEvent(eventId, int(midi.MaxInt / 2 * 0.5), self.SmoothSpeed)
         elif self.Page == Page_Pan:
             eventId = midi.REC_Mixer_Vol + mixer.getTrackPluginId(mixer.trackNumber(), 0)
-            mixer.automateEvent(eventId, int(midi.MaxInt / 2 * 0.8), midi.REC_MIDIController, self.SmoothSpeed)
+            self.automateEvent(eventId, int(midi.MaxInt / 2 * 0.8), self.SmoothSpeed)
 

@@ -45,6 +45,8 @@ class Faders(Abstract):
             self.UpdateLEDs()
             self.UpdateTextDisplay()
             self.UpdateColT()
+            link = self.checkFaderLink(index)
+            self.SendMsgToFL(f"Fader #{index} linked to {link[0]}")
             return
 
         if index >= self.TrackCount:
@@ -200,6 +202,8 @@ class Faders(Abstract):
     def SetFirstTrack(self, Value):
         self.FirstTrackT[self.FirstTrack] = (
             Value + mixer.trackCount()) % mixer.trackCount()
-        s = utils.Zeros(self.FirstTrackT[self.FirstTrack], 2, ' ')
+        firstTrack = self.FirstTrackT[self.FirstTrack]
+        lastTrack = (firstTrack + self.TrackCount) % mixer.trackCount()
+        self.SendMsgToFL(f"Faders assigned to tracks #{firstTrack} through #{lastTrack}")
         self.UpdateColT()
         device.hardwareRefreshMixerTrack(-1)

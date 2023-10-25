@@ -26,46 +26,50 @@ class SelectControls(Abstract):
     def handleSelectButtons(self, event):
         index = SelectButtons.index(event.data1)
         event.handled = True
-        if self.Page in [Page_Volume, Page_Pan]:
-            if self.Shift:
-                if self.Page == Page_Volume:
-                    mixer.setTrackVolume(self.ColT[index].TrackNum, 0.8)
-                else:
-                    mixer.setTrackPan(self.ColT[index].TrackNum, 0)
-            elif self.armMode:
-                mixer.armTrack(self.ColT[index].TrackNum)
-                if mixer.isTrackArmed(self.ColT[index].TrackNum):
-                    self.SendMsgToFL(mixer.getTrackName(
-                        self.ColT[index].TrackNum) + ' recording to ' + mixer.getTrackRecordingFileName(self.ColT[index].TrackNum))
-                else:
-                    self.SendMsgToFL(mixer.getTrackName(
-                        self.ColT[index].TrackNum) + ' unarmed')
+        if self.Shift and self.Page in [Page_Volume, Page_Pan, Page_Stereo]:
+            if self.Page == Page_Volume:
+                mixer.setTrackVolume(self.ColT[index].TrackNum, 0.8)
+            elif self.Page == Page_Pan:
+                mixer.setTrackPan(self.ColT[index].TrackNum, 0)
+            elif self.Page == Page_Stereo:
+                mixer.setTrackStereoSep(self.ColT[index].TrackNum, 0)
+        elif self.armMode:
+            mixer.armTrack(self.ColT[index].TrackNum)
+            if mixer.isTrackArmed(self.ColT[index].TrackNum):
+                self.SendMsgToFL(mixer.getTrackName(
+                    self.ColT[index].TrackNum) + ' recording to ' + mixer.getTrackRecordingFileName(self.ColT[index].TrackNum))
             else:
+                self.SendMsgToFL(mixer.getTrackName(
+                    self.ColT[index].TrackNum) + ' unarmed')
+        else:
+            if self.Page in [Page_Volume, Page_Pan, Page_Stereo]:
                 ui.showWindow(midi.widMixer)
                 ui.setFocused(midi.widMixer)
                 self.UpdateLEDs()
                 mixer.setTrackNumber(self.ColT[index].TrackNum, midi.curfxScrollToMakeVisible | midi.curfxMinimalLatencyUpdate)
-                self.SendMsgToFL(mixer.getTrackName(self.ColT[index].TrackNum))
-        elif self.Page == Page_FX:
-            if self.CurPluginID == -1:
-                if plugins.isValid(mixer.trackNumber(), index):
-                    self.CurPluginID = index
-                    self.PluginParamOffset = 0
-                    mixer.focusEditor(mixer.trackNumber(), index)
-                    self.UpdateColT()
-                    self.UpdateLEDs()
-                    self.UpdateTextDisplay()
-            else:
-                # AP: Ignore button presses, there's no functionality that makes sense in this case
-                pass
-        elif self.Page == Page_Sends:
-            fromTrack = mixer.trackNumber()
-            toTrack = self.FirstTrackT[self.FirstTrack] + index
-            mixer.setRouteTo(
-                fromTrack,
-                toTrack,
-                not mixer.getRouteSendActive(fromTrack, toTrack)
-            )
+                self.SendMsgToFL("Channel selected: " + mixer.getTrackName(self.ColT[index].TrackNum))
+            elif self.Page == Page_FX:
+                if self.CurPluginID == -1:
+                    if plugins.isValid(mixer.trackNumber(), index):
+                        self.CurPluginID = index
+                        self.PluginParamOffset = 0
+                        mixer.focusEditor(mixer.trackNumber(), index)
+                        self.UpdateColT()
+                        self.UpdateLEDs()
+                        self.UpdateTextDisplay()
+                else:
+                    # AP: Ignore button presses, there's no functionality that makes sense in this case
+                    pass
+            elif self.Page == Page_Sends:
+                fromTrack = mixer.trackNumber()
+                toTrack = self.FirstTrackT[self.FirstTrack] + index
+                state = not mixer.getRouteSendActive(fromTrack, toTrack)
+                mixer.setRouteTo(fromTrack, toTrack, state)
+                if state:
+                    self.SendMsgToFL(f"Track #{fromTrack} routed to track #{toTrack}")
+                else:
+                    self.SendMsgToFL(f"Track #{fromTrack} no longer routed to track #{toTrack}")
+
 
     def UpdateSelectLEDs(self):
         for index in range(0, self.TrackCount):
@@ -83,12 +87,12 @@ class SelectControls(Abstract):
                     except: paramCount = 0
                     state = index + self.PluginParamOffset < paramCount
             else:
-                if self.Shift:
-                    rgb = [0x0, 0x5F, 0x0]
-                    state = True
-                elif self.armMode:
+                if self.armMode:
                     rgb = [0xFF, 0x0, 0x0]
                     state = mixer.isTrackArmed(self.ColT[index].TrackNum)
+                elif self.Shift and self.Page in [Page_Volume, Page_Pan, Page_Stereo]:
+                    rgb = [0x0, 0x5F, 0x0]
+                    state = True
                 else:
                     if self.Page == Page_Sends:
                         state = mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[index].TrackNum) or (index == mixer.trackNumber())

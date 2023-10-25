@@ -29,6 +29,9 @@ class Abstract():
     def UpdateTextDisplay(): return
     def OnMidiMsg(self, event): return
     def handleResponsiveButtonLED(self, event): return
+    def automateEvent(self, eventId, value, smoothSpeed): return
+
+    def noop(*args): return
 
     def RegisterMidiListener(self, eventInfo: EventInfo, callback, setEventHandled = True):
         self.midiListeners.append([eventInfo, callback, setEventHandled])
