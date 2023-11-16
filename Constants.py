@@ -6,8 +6,9 @@ Page_Volume = 0
 Page_Sends = 1
 Page_Pan = 2
 Page_FX = 3
-Page_EQ = 4 # Not yet assigned to any button
-Page_Stereo = 5 # Not yet assigned to any button
+Page_EQ = 4
+Page_Stereo = 5
+Page_Links = 6
 
 # SYSEX
 HEADER = bytearray([0xF0, 0x00, 0x01, 0x06, 0x16])
@@ -88,5 +89,6 @@ PageNames = (
     'Panning',
     'Effects',
     'EQ',
-    'Stereo width'
+    'Stereo width',
+    'Freely assignable faders'
 )

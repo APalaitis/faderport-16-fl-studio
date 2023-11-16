@@ -23,8 +23,9 @@ class TopRightButtons(Abstract):
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System_Safe, B_Undo, True), self.handleUndo)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_User1, True), self.handleUser1)
         self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_User2, True), self.handleUser2)
+        self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, B_User3, True), self.handleUser3)
 
-        for key in [B_Save, B_Redo, B_Undo, B_User3]:
+        for key in [B_Save, B_Redo, B_Undo]:
             self.RegisterMidiListener(EventInfo(midi.MIDI_NOTEON, midi.PME_System, key, False), self.handleResponsiveButtonLED)
 
         self.RegisterLEDUpdate(self.UpdateTopRightLEDs)
@@ -34,6 +35,9 @@ class TopRightButtons(Abstract):
 
     def handleUser2(self, event):
         self.SetPage(Page_EQ)
+
+    def handleUser3(self, event):
+        self.SetPage(Page_Links)
 
     def handleSave(self, event):
         transport.globalTransport(midi.FPT_Save, 1, event.pmeFlags)
@@ -50,3 +54,6 @@ class TopRightButtons(Abstract):
 
         # EQ page
         device.midiOutMsg((B_User2 << 8) + midi.TranzPort_OffOnT[self.Page == Page_EQ])
+
+        # Links page
+        device.midiOutMsg((B_User3 << 8) + midi.TranzPort_OffOnT[self.Page == Page_Links])

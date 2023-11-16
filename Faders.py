@@ -51,13 +51,6 @@ class Faders(Abstract):
 
         if index >= self.TrackCount:
             return
-        
-        # AP: Check if the fader is linked to a param, and if so - unlink it from vol/pan
-        if (self.checkFaderLink(index)[1] > -1 and self.Page in [Page_Pan, Page_Volume]):
-            self.UpdateColT()
-            # The event will continue to the linked parameter
-            event.handled = False
-            return
 
         event.inEv = event.data1 + (event.data2 << 7)
         event.outEv = (event.inEv << 16) // 16383
@@ -75,6 +68,8 @@ class Faders(Abstract):
                         plugins.getParamName(paramIndex, self.PluginTrack, int(self.CurPluginID + self.CurPluginOffset))
                         + ': '
                         + str(round(level, 2)))
+        elif self.Page == Page_Links:
+            event.handled = False
         elif self.ColT[index].SliderEventID >= 0:
             # slider (mixer track volume)
             mixer.automateEvent(self.ColT[index].SliderEventID, self.AlphaTrack_SliderToLevel(
@@ -104,7 +99,6 @@ class Faders(Abstract):
             # AP: By default, values come from REC events
             sv = mixer.getEventValue(self.ColT[Num].SliderEventID)
             
-            linkValue = self.checkFaderLink(Num)[1]
             # AP: Plugin params don't have REC events associated with them, so we use functions to get the values
             if self.Page == Page_FX:
                 if (self.CurPluginID >= 0):
@@ -114,17 +108,19 @@ class Faders(Abstract):
                         if paramIndex < paramCount:
                             paramValue = plugins.getParamValue(paramIndex, self.PluginTrack, self.CurPluginID)
                             sv = int(midi.FromMIDI_Max * paramValue)
-            
-            # elif linkValue > -1 and self.Page in [Page_Pan, Page_Volume]:
-            #     sv = int(midi.FromMIDI_Max * linkValue)
+
+            elif self.Page == Page_Links:    
+                linkValue = self.checkFaderLink(Num)[1]
+                if linkValue > -1:
+                    sv = int(midi.FromMIDI_Max * linkValue)
+                else:
+                    sv = 0
 
             # slider
-            # AP: If the control is linked, don't move the fader
-            if not (linkValue > -1 and self.Page in [Page_Pan, Page_Volume]):
-                data1 = self.AlphaTrack_LevelToSlider(sv)
-                data2 = data1 & 127
-                data1 = data1 >> 7
-                device.midiOutMsg(midi.MIDI_PITCHBEND + Num + (data2 << 8) + (data1 << 16))
+            data1 = self.AlphaTrack_LevelToSlider(sv)
+            data2 = data1 & 127
+            data1 = data1 >> 7
+            device.midiOutMsg(midi.MIDI_PITCHBEND + Num + (data2 << 8) + (data1 << 16))
 
     #############################################################################################################################
     #                                                                                                                           #

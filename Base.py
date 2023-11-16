@@ -226,17 +226,7 @@ class Base(
                     tag = "FX"
                     if plugins.isValid(self.PluginTrack, pluginIndex):
                         t = (plugins.getPluginName(self.PluginTrack, pluginIndex)).split()
-                        line1 = t[0][0:6]
-                        if len(t) == 3:
-                            # otherwise we can miss important aspects of the plugin like version number
-                            t[1] = t[1]+t[2]
-                        if len(t) >= 2:
-                            line2 = t[1][0:6].title()
-                        elif (len(t) == 1 and len(t[0]) > 6):
-                            line2 = t[0][6:]
-                            if len(line2) == 1:  # This just looks ugly so instead:
-                                line1 = t[0][0:5]
-                                line2 = t[0][5:]
+                        [line1, line2] = self.formatDisplayText(t)
                     else:
                         line1 = ""  # invalid
                         line2 = "-"
@@ -248,18 +238,7 @@ class Base(
                 if paramIndex < paramCount:
                     tag = "PR"
                     t = self.ColT[index].TrackName.split()
-                    if len(t) > 0:
-                        line1 = t[0][0:6]
-                        if len(t) == 3:
-                            # otherwise we can miss important aspects of the param
-                            t[1] = t[1]+t[2]
-                        if len(t) >= 2:
-                            line2 = t[1][0:6].title()
-                        elif (len(t) == 1 and len(t[0]) > 6):
-                            line2 = t[0][6:]
-                            if len(line2) == 1:  # This just looks ugly so instead:
-                                line1 = t[0][0:5]
-                                line2 = t[0][5:]
+                    [line1, line2] = self.formatDisplayText(t)
                     if paramIndex > 99:
                         line3 = tag[0] + str(paramIndex).zfill(2)
                     else:
@@ -267,45 +246,54 @@ class Base(
             elif self.Page in [Page_Pan, Page_Stereo, Page_Volume, Page_Sends]:
                 link = self.checkFaderLink(index)
                 tag = "CH"
-                t = ''
-                if link[1] >= 0:
-                    t = link[0].split()
+                t = mixer.getTrackName(self.ColT[index].TrackNum, 12).split()
+                [line1, line2] = self.formatDisplayText(t)
+                if self.Page == Page_Sends:
+                    if self.ColT[index].TrackNum == mixer.trackNumber():
+                        line3 = 'FROM'
+                    if mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[index].TrackNum):
+                        line3 = 'TO'
                 else:
-                    t = mixer.getTrackName(self.ColT[index].TrackNum, 12).split()
-                if len(t) > 0:
-                    line1 = t[0][0:6]
-                    if len(t) == 3:
-                        # otherwise we can miss important aspects of the name
-                        t[1] = t[1]+t[2]
-                    if len(t) >= 2:
-                        line2 = t[1][0:6].title()
-                    elif (len(t) == 1 and len(t[0]) > 6):
-                        line2 = t[0][6:]
-                        # This just looks ugly so instead:
-                        if len(line2) == 1:
-                            line1 = t[0][0:5]
-                            line2 = t[0][5:]
-                if link[1] >= 0:
-                    line3 = 'LINK'
-                else:
-                    if self.Page == Page_Sends:
-                        if self.ColT[index].TrackNum == mixer.trackNumber():
-                            line3 = 'FROM'
-                        if mixer.getRouteSendActive(mixer.trackNumber(), self.ColT[index].TrackNum):
-                            line3 = 'TO'
+                    if self.ColT[index].TrackNum > 99:
+                        line3 = tag[0] + str(self.ColT[index].TrackNum).zfill(2)
                     else:
-                        if self.ColT[index].TrackNum > 99:
-                            line3 = tag[0] + str(self.ColT[index].TrackNum).zfill(2)
-                        else:
-                            line3 = tag + str(self.ColT[index].TrackNum).zfill(2)
+                        line3 = tag + str(self.ColT[index].TrackNum).zfill(2)
 
             elif self.Page == Page_EQ:
                 if index < 7:
                     line1 = ("Low","Med","High","Low","Med","High","Reset")[index]
                     line2 = ("Freq","Freq","Freq","Width","Width","Width","All")[index]
+            elif self.Page == Page_Links:
+                link = self.checkFaderLink(index)
+                if link[1] >= 0:
+                    [line1, line2] = self.formatDisplayText(link[0].split())
+                    line3 = 'LINK'
+                else:
+                    line1 = '--'
+                    line2 = 'No Link'
+                    line3 = '--'
+
             self.SendMsg(line1, index, 0)
             self.SendMsg(line2, index, 1)
             self.SendMsg(line3, index, 2)
+
+    def formatDisplayText(self, string):
+        if len(string) > 0:
+            line1 = string[0][0:6]
+            line2 = ''
+            if len(string) == 3:
+                # otherwise we can miss important aspects of the name
+                string[1] = string[1] + string[2]
+            if len(string) >= 2:
+                line2 = string[1][0:6].title()
+            elif (len(string) == 1 and len(string[0]) > 6):
+                line2 = string[0][6:]
+                # This just looks ugly so instead:
+                if len(line2) == 1:
+                    line1 = string[0][0:5]
+                    line2 = string[0][5:]
+            return [line1, line2]
+        return None
 
     #############################################################################################################################
     #                                                                                                                           #
