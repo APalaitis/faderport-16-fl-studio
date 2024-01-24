@@ -26,7 +26,9 @@ class SelectControls(Abstract):
     def handleSelectButtons(self, event):
         index = SelectButtons.index(event.data1)
         event.handled = True
-        if self.Shift and self.Page in [Page_Volume, Page_Pan, Page_Stereo]:
+        if self.Page == Page_Links:
+            event.handled = False
+        elif self.Shift and self.Page in [Page_Volume, Page_Pan, Page_Stereo]:
             if self.Page == Page_Volume:
                 mixer.setTrackVolume(self.ColT[index].TrackNum, 0.8)
             elif self.Page == Page_Pan:

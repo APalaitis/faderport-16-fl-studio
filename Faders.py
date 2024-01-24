@@ -109,10 +109,10 @@ class Faders(Abstract):
                             paramValue = plugins.getParamValue(paramIndex, self.PluginTrack, self.CurPluginID)
                             sv = int(midi.FromMIDI_Max * paramValue)
 
-            elif self.Page == Page_Links:    
-                linkValue = self.checkFaderLink(Num)[1]
-                if linkValue > -1:
-                    sv = int(midi.FromMIDI_Max * linkValue)
+            elif self.Page == Page_Links:
+                linkValue = self.checkFaderLink(Num)
+                if linkValue[1] > -1:
+                    sv = int(midi.FromMIDI_Max * linkValue[1])
                 else:
                     sv = 0
 

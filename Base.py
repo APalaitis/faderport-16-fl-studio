@@ -244,7 +244,6 @@ class Base(
                     else:
                         line3 = tag + str(paramIndex).zfill(2)
             elif self.Page in [Page_Pan, Page_Stereo, Page_Volume, Page_Sends]:
-                link = self.checkFaderLink(index)
                 tag = "CH"
                 t = mixer.getTrackName(self.ColT[index].TrackNum, 12).split()
                 [line1, line2] = self.formatDisplayText(t)
@@ -315,15 +314,15 @@ class Base(
 
         if self.Page == Page_Volume:
             mode = 0x1
-            value = int((mixer.getTrackPan(self.ColT[index].TrackNum) + 1) * 64)
+            value = int((mixer.getTrackPan(self.ColT[index].TrackNum) + 1) * 64) - 1
         elif self.Page == Page_Pan:
             mode = 0x2
-            value = int(mixer.getTrackVolume(self.ColT[index].TrackNum) * 128)
+            value = int(mixer.getTrackVolume(self.ColT[index].TrackNum) * 128) - 1
         elif self.Page == Page_Sends:
             if mixer.getRouteSendActive(self.ColT[index].TrackNum, mixer.trackNumber()):
                 mode = 0x2
                 eventId = mixer.getTrackPluginId(self.ColT[index].TrackNum, 0) + midi.REC_Mixer_Send_First + mixer.trackNumber()
-                value = int(mixer.getEventValue(eventId) / midi.MaxInt * 2 * 128)
+                value = int(mixer.getEventValue(eventId) / midi.MaxInt * 2 * 128) - 1
 
         device.midiOutMsg(value << 16 | valueMessage << 8 | 0xB0)
         device.midiOutMsg(mode << 16 | modeMessage << 8 | 0xB0)
