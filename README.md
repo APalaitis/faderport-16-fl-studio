@@ -4,7 +4,7 @@
 * Script version: 0.3.0
 * Faderport 16 firmware version: 3.74
 
-Designed to use with the Studio One mode in Faderport. You can switch modes by holding the Select buttons of the first two fader strips while powering on.
+Designed to be used with the **Studio One mode** in Faderport. You can switch modes by holding the Select buttons of the first two fader strips while powering on.
 
 # Button list
 
@@ -18,8 +18,8 @@ Designed to use with the Studio One mode in Faderport. You can switch modes by h
 
 ## Mixer track strips
 * Select - Selects/focuses a mixer track. Some pages may assign other functionality to this button. *Shift*+*Select* will reset the fader to the default value (where applicable).
-* M(ute) - Toggles mute on a mixer track.
-* S(olo) - Toggles solo on a mixer track.
+* **M**ute - Toggles mute on a mixer track.
+* **S**olo - Toggles solo on a mixer track.
 
 ## Right side strip
 * Track/Timecode - Switch to the **Volume Page** (default). Faders control mixer track volume.
