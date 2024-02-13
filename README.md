@@ -1,10 +1,11 @@
 # faderport-16-fl-studio
 ## PreSonus Faderport 16 script for FL Studio integration script
 
-* Script version: 0.3.0
+* Script version: 0.4.0
 * Faderport 16 firmware version: 3.74
 
 Designed to be used with the **Studio One mode** in Faderport. You can switch modes by holding the Select buttons of the first two fader strips while powering on.
+Support for Faderport 8 is experimental.
 
 # Button list
 

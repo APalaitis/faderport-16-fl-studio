@@ -7,6 +7,7 @@ from Constants import *
 class Abstract():
     midiListeners = []
     ledUpdates = []
+    isFP8 = False
     isExtension = False
     SliderHoldCount = 0
     TrackCount = 16

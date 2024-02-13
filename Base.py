@@ -44,7 +44,9 @@ class Base(
         LeftSideButtons,
         TopRightButtons
     ):
-    def __init__(self, isExtension: bool = False):
+    def __init__(self, isFP8: bool = False, isExtension: bool = False):
+        self.isFP8 = isFP8
+        self.TrackCount = 8 if isFP8 else 16
         self.isExtension = isExtension
         self.FirstTrack = self.TrackCount if isExtension else 0
         for x in range(0, self.TrackCount):
@@ -101,7 +103,7 @@ class Base(
         # REFRESH METERS
         # ---------------
         if device.isAssigned():
-            for m in range(0,  len(self.ColT)):
+            for m in range(0, self.TrackCount):
                 self.ColT[m].Tag = utils.Limited(
                     self.ColT[m].Peak, 0, self.MeterMax)
                 self.ColT[m].Peak = 0
@@ -129,7 +131,7 @@ class Base(
     #                                                                                                                           #
     #############################################################################################################################
     def OnDirtyMixerTrack(self, SetTrackNum):
-        for m in range(0, len(self.ColT)):
+        for m in range(0, self.TrackCount):
             if (self.ColT[m].TrackNum == SetTrackNum) | (SetTrackNum == -1):
                 self.ColT[m].Dirty = True
 
@@ -150,7 +152,7 @@ class Base(
         if flags & midi.HW_Dirty_Mixer_Controls:
             self.UpdateLEDs()
             self.UpdateValueBars()
-            for n in range(0, len(self.ColT)):
+            for n in range(0, self.TrackCount):
                 if self.ColT[n].Dirty:
                     self.UpdateCol(n)
 
@@ -198,7 +200,7 @@ class Base(
     #############################################################################################################################
 
     def SendMsg(self, Msg, Channel=0, Row=0):
-        sysex = bytes(HEADER + Sysex_Text + bytearray([Channel, Row, 0x0]) + bytearray(Msg, 'utf-8') + FOOTER)
+        sysex = bytes((HEADER_8 if self.isFP8 else HEADER_16) + Sysex_Text + bytearray([Channel, Row, 0x0]) + bytearray(Msg, 'utf-8') + FOOTER)
         device.midiOutSysex(sysex)
 
     #############################################################################################################################
@@ -216,7 +218,7 @@ class Base(
     #                                                                                                                           #
     #############################################################################################################################
     def UpdateTextDisplay(self):
-        for index in range(0, len(self.ColT)):
+        for index in range(0, self.TrackCount):
             line1 = ''
             line2 = ''
             line3 = ''
@@ -301,7 +303,7 @@ class Base(
     #############################################################################################################################
 
     def UpdateValueBars(self):
-        for index in range(self.FirstTrack, self.FirstTrack + 16):
+        for index in range(self.FirstTrack, self.FirstTrack + self.TrackCount):
             self.UpdateValueBar(index)
     
     def UpdateValueBar(self, index):

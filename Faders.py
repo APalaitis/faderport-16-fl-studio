@@ -131,7 +131,7 @@ class Faders(Abstract):
         f = self.FirstTrackT[self.FirstTrack]
         CurID = mixer.getTrackPluginId(mixer.trackNumber(), 0)
 
-        for m in range(0, len(self.ColT)):
+        for m in range(0, self.TrackCount):
             ch = 'CH'+str(self.ColT[m].TrackNum).zfill(2) + ' - '
 
             self.ColT[m].TrackName = ''

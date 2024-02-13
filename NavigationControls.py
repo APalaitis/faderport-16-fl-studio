@@ -51,7 +51,7 @@ class NavigationControls(Abstract):
             arrangement.addAutoTimeMarker(arrangement.currentTime(False), "New marker")
             self.SendMsgToFL("Placed a marker at current play position")
 
-    def handleArrowButtons(self, event):       
+    def handleArrowButtons(self, event):
         if self.Page == Page_FX:
             if (self.CurPluginID != -1):  # Selected Plugin
                 if (event.data1 == B_ArrowLeft) & (self.PluginParamOffset >= self.TrackCount):
@@ -78,11 +78,8 @@ class NavigationControls(Abstract):
                     self.SendMsgToFL("Jumping to the next marker")
                     arrangement.jumpToMarker(1, False)
             else:
-                self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] - 8 + int(event.data1 == B_ArrowRight) * self.TrackCount)
+                self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] + (1 if event.data1 == B_ArrowRight else -1) * self.TrackCount)
                 if not self.isExtension:
                     device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))
-                if self.Page != Page_FX:
-                    for m in range(0, 0 if self.isExtension else 1):
-                        self.SetFirstTrack(self.FirstTrackT[self.FirstTrack] - 8 + int(event.data1 == B_ArrowRight) * self.TrackCount)
         if not self.isExtension:
             device.dispatch(0, midi.MIDI_NOTEON + (event.data1 << 8) + (event.data2 << 16))

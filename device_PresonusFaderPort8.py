@@ -1,6 +1,6 @@
 ###########################################################
-# name=Presonus FaderPort 16
-# supportedDevices=PreSonus FP16
+# name=Presonus FaderPort 8
+# supportedDevices=PreSonus FP8
 # url=https://forum.image-line.com/viewtopic.php?t=322725
 ###########################################################
 import arrangement
@@ -25,33 +25,33 @@ from Constants import *
 # CLASS FOR GENERAL FUNCTIONALITY
 ##################################
 
-class Faderport16(Base):
+class Faderport8(Base):
     def __init__(self):
-        Base.__init__(self)
+        Base.__init__(self, True)
 
-Faderport16Impl = Faderport16()
+Faderport8Impl = Faderport8()
 
 #EOF
 def OnInit():
-    Faderport16Impl.OnInit()
+    Faderport8Impl.OnInit()
 
 def OnDeInit():
-    Faderport16Impl.OnDeInit()
+    Faderport8Impl.OnDeInit()
 
 def OnDirtyMixerTrack(SetTrackNum):
-    Faderport16Impl.OnDirtyMixerTrack(SetTrackNum)
+    Faderport8Impl.OnDirtyMixerTrack(SetTrackNum)
 
 def OnRefresh(Flags):
-    Faderport16Impl.OnRefresh(Flags)
+    Faderport8Impl.OnRefresh(Flags)
 
 def OnMidiMsg(event):
-    Faderport16Impl.OnMidiMsg(event)
+    Faderport8Impl.OnMidiMsg(event)
 
 def SendMsg2(Msg, Duration=1000):
-    Faderport16Impl.SendMsgToFL(Msg, Duration)
+    Faderport8Impl.SendMsgToFL(Msg, Duration)
 
 def OnUpdateBeatIndicator(Value):
-    Faderport16Impl.OnUpdateBeatIndicator(Value)
+    Faderport8Impl.OnUpdateBeatIndicator(Value)
 
 def OnIdle():
-    Faderport16Impl.OnIdle()
+    Faderport8Impl.OnIdle()
